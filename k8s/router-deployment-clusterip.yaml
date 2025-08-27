@@ -20,25 +20,29 @@ spec:
       - name: apollo-router
         image: ghcr.io/apollographql/router:v2.5.0
         ports:
-        - containerPort: 4000
-          name: graphql
-        - containerPort: 8088
-          name: health
+          - containerPort: 4000
+            name: graphql
+          - containerPort: 8088
+            name: health
         env:
-        - name: APOLLO_GRAPH_REF
-          value: "${APOLLO_GRAPH_REF}"
-        - name: APOLLO_KEY
-          value: "${APOLLO_KEY}"
-        - name: PORT
-          value: "4000"
+          - name: APOLLO_GRAPH_REF
+            value: "${APOLLO_GRAPH_REF}"
+          - name: APOLLO_KEY
+            value: "${APOLLO_KEY}"
+          - name: PORT
+            value: "4000"
         volumeMounts:
-        - name: router-config
-          mountPath: /dist/config.yaml
-          subPath: config.yaml
-        - name: supergraph-schema
-          mountPath: /dist/supergraph.graphql
-          subPath: supergraph.graphql
-        args: ["--config", "/dist/config.yaml", "--supergraph", "/dist/supergraph.graphql"]
+          - name: router-config
+            mountPath: /dist/config.yaml
+            subPath: config.yaml
+          - name: supergraph-schema
+            mountPath: /dist/supergraph.graphql
+            subPath: supergraph.graphql
+        args:
+          - "--config"
+          - "/dist/config.yaml"
+          - "--supergraph"
+          - "/dist/supergraph.graphql"
         resources:
           requests:
             memory: "128Mi"
@@ -59,12 +63,12 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
-      - name: router-config
-        configMap:
-          name: router-config
-      - name: supergraph-schema
-        configMap:
-          name: supergraph-schema
+        - name: router-config
+          configMap:
+            name: router-config
+        - name: supergraph-schema
+          configMap:
+            name: supergraph-schema
 ---
 apiVersion: v1
 kind: Service
@@ -77,10 +81,10 @@ spec:
   selector:
     app: apollo-router
   ports:
-  - name: graphql
-    port: 4000
-    targetPort: 4000
-  - name: health
-    port: 8088
-    targetPort: 8088
+    - name: graphql
+      port: 4000
+      targetPort: 4000
+    - name: health
+      port: 8088
+      targetPort: 8088
   type: ClusterIP

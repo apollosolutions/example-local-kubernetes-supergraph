@@ -110,7 +110,7 @@ kubectl port-forward svc/apollo-router-service 4000:4000 -n apollo-supergraph
 
 ```bash
 # Clean up deployment
-./cleanup.sh
+./cleanup-k8s.sh
 
 # Stop and delete minikube cluster
 ./kill-minikube.sh
@@ -199,7 +199,7 @@ k8s/
 └── ingress.yaml            # Ingress configuration
 
 run-k8s.sh                  # Kubernetes deployment script
-cleanup.sh                  # Unified cleanup script
+cleanup-k8s.sh              # Kubernetes cleanup script
 test-k8s.sh                 # Kubernetes test script
 setup-minikube.sh           # Minikube setup script
 subgraphs/Dockerfile        # Subgraphs Docker image
@@ -212,8 +212,8 @@ subgraphs/Dockerfile        # Subgraphs Docker image
 - `./run-k8s.sh --replicas N` - Deploy with N replicas
 - `./run-k8s.sh --help` - Show help
 
-### cleanup.sh
-- `./cleanup.sh` - Clean up Apollo Supergraph namespace
+### cleanup-k8s.sh
+- `./cleanup-k8s.sh` - Clean up Apollo Supergraph namespace
 
 ### test-k8s.sh
 - `./test-k8s.sh` - Test Apollo Supergraph deployment

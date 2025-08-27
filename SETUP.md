@@ -184,7 +184,7 @@ To view test results, check the "Actions" tab in the GitHub repository.
 ├── run-k8s.sh                # Deploy to Kubernetes
 ├── test-local.sh             # Test local setup
 ├── test-k8s.sh               # Test Kubernetes deployment
-├── cleanup.sh                # Clean up Kubernetes resources
+├── cleanup-k8s.sh            # Clean up Kubernetes resources
 └── kill-minikube.sh          # Stop and delete minikube cluster
 ```
 

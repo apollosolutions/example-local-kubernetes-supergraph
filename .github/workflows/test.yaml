@@ -129,7 +129,7 @@ jobs:
         run: |
           # Test that scripts with help options work
           ./run-k8s.sh --help || exit 1
-          ./cleanup.sh --help || exit 1
+          ./cleanup-k8s.sh --help || exit 1
           ./kill-minikube.sh --help || exit 1
           ./setup-minikube.sh --help || exit 1
           ./setup-env.sh --help || exit 1

@@ -143,7 +143,7 @@ jobs:
           pkill -f "kubectl port-forward" || true
           
           # Clean up deployment
-          ./cleanup.sh || true
+          ./cleanup-k8s.sh || true
           
           # Delete kind cluster
           kind delete cluster || true

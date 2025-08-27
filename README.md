@@ -12,11 +12,7 @@ Run the Apollo Supergraph locally without Kubernetes:
 # Run both subgraphs and router
 ./run-local.sh
 
-# Run only subgraphs (for development)
-./run-local.sh --subgraphs-only
 
-# Run only router (requires subgraphs running)
-./run-local.sh --router-only
 
 # Show help
 ./run-local.sh --help
@@ -99,7 +95,7 @@ Ctrl+C (in the terminal running run-local.sh)
 ### Kubernetes Deployment
 ```bash
 # Clean up deployment
-./cleanup.sh
+./cleanup-k8s.sh
 
 # Stop and delete minikube cluster
 ./kill-minikube.sh

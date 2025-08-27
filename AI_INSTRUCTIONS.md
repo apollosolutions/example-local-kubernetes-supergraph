@@ -156,7 +156,7 @@ sed 's|http://localhost:4001|http://subgraphs-service.apollo-supergraph.svc.clus
 - `deploy.sh` - Kubernetes deployment WITH minikube
 - `setup-minikube.sh` - Setup minikube cluster
 - `kill-minikube.sh` - Stop and delete minikube cluster
-- `cleanup.sh` - Clean up Kubernetes resources
+- `cleanup-k8s.sh` - Clean up Kubernetes resources
 
 **Never suggest using Kubernetes scripts for local development or vice versa.**
 

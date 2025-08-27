@@ -1,0 +1,19 @@
+# $schema: configuration_schema.json
+
+sandbox:
+  enabled: true
+
+supergraph:
+  introspection: true
+  listen: 0.0.0.0:${env.PORT:-4000}
+
+homepage:
+  enabled: false
+
+include_subgraph_errors:
+  all: true
+
+telemetry:
+  instrumentation:
+    spans:
+      mode: spec_compliant

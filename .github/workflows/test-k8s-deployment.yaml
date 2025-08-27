@@ -1,10 +1,11 @@
+---
 name: Test Kubernetes Deployment
 
 on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   test-k8s-deployment:
@@ -28,16 +29,16 @@ jobs:
         run: |
           # Create kind cluster
           kind create cluster --name kind
-          
+
           # Verify cluster is running
           kind get clusters
-          
+
           # Verify nodes are ready
           kubectl get nodes
-          
+
           # Wait for cluster to be ready
           kubectl wait --for=condition=ready node --all --timeout=300s
-          
+
           echo "✅ Kind cluster is ready"
 
       - name: Install Docker Buildx
@@ -47,15 +48,15 @@ jobs:
         run: |
           cd subgraphs
           docker build -t subgraphs:test .
-          
+
           # Verify the image was created
           if ! docker images | grep -q "subgraphs.*test"; then
             echo "❌ Docker build failed for subgraphs"
             exit 1
           fi
-          
+
           echo "✅ Subgraphs Docker build successful"
-          
+
           # Load image into kind cluster
           kind load docker-image subgraphs:test
 
@@ -63,17 +64,17 @@ jobs:
         run: |
           # Test subgraphs container locally before deploying to K8s
           docker run -d --name subgraphs-test -p 4001:4001 subgraphs:test
-          
+
           # Wait for container to start
           sleep 10
-          
+
           # Check if container is running
           if ! docker ps | grep -q "subgraphs-test"; then
             echo "❌ Subgraphs container failed to start"
             docker logs subgraphs-test
             exit 1
           fi
-          
+
           # Test all subgraph endpoints
           echo "Testing products endpoint..."
           curl -X POST http://localhost:4001/products/graphql \
@@ -82,7 +83,7 @@ jobs:
             --max-time 10 \
             --retry 3 \
             --retry-delay 2 || exit 1
-          
+
           echo "Testing reviews endpoint..."
           curl -X POST http://localhost:4001/reviews/graphql \
             -H "Content-Type: application/json" \
@@ -90,7 +91,7 @@ jobs:
             --max-time 10 \
             --retry 3 \
             --retry-delay 2 || exit 1
-          
+
           echo "Testing users endpoint..."
           curl -X POST http://localhost:4001/users/graphql \
             -H "Content-Type: application/json" \
@@ -98,9 +99,9 @@ jobs:
             --max-time 10 \
             --retry 3 \
             --retry-delay 2 || exit 1
-          
+
           echo "✅ All subgraph endpoints responding"
-          
+
           # Cleanup test container
           docker stop subgraphs-test || true
           docker rm subgraphs-test || true
@@ -120,23 +121,27 @@ jobs:
           echo "Verifying kind cluster status..."
           kind get clusters
           kubectl get nodes
-          
+
           # Deploy using our scripts
           ./run-k8s.sh --replicas 1
-          
+
           # Wait for deployments to be ready
-          kubectl wait --for=condition=available --timeout=300s deployment/subgraphs -n apollo-supergraph
-          kubectl wait --for=condition=available --timeout=300s deployment/apollo-router -n apollo-supergraph
+          kubectl wait --for=condition=available --timeout=300s \
+            deployment/subgraphs -n apollo-supergraph
+          kubectl wait --for=condition=available --timeout=300s \
+            deployment/apollo-router -n apollo-supergraph
 
       - name: Test Kubernetes deployment
         run: |
           # Port forward to access services
-          kubectl port-forward svc/apollo-router-service 4000:4000 -n apollo-supergraph &
-          kubectl port-forward svc/subgraphs-service 4001:4001 -n apollo-supergraph &
-          
+          kubectl port-forward svc/apollo-router-service 4000:4000 \
+            -n apollo-supergraph &
+          kubectl port-forward svc/subgraphs-service 4001:4001 \
+            -n apollo-supergraph &
+
           # Wait for port forwarding
           sleep 10
-          
+
           # Test subgraphs directly in K8s
           echo "Testing subgraphs in Kubernetes..."
           curl -X POST http://localhost:4001/products/graphql \
@@ -145,7 +150,7 @@ jobs:
             --max-time 10 \
             --retry 3 \
             --retry-delay 2 || exit 1
-          
+
           # Test router in K8s
           echo "Testing router in Kubernetes..."
           curl -X POST http://localhost:4000/graphql \
@@ -154,7 +159,7 @@ jobs:
             --max-time 10 \
             --retry 3 \
             --retry-delay 2 || exit 1
-          
+
           echo "✅ Kubernetes deployment test successful"
 
       - name: Cleanup
@@ -162,9 +167,9 @@ jobs:
         run: |
           # Stop port forwarding
           pkill -f "kubectl port-forward" || true
-          
+
           # Clean up deployment
           ./cleanup-k8s.sh || true
-          
+
           # Delete kind cluster
           kind delete cluster || true

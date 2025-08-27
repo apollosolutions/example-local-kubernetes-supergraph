@@ -1,3 +1,4 @@
+---
 name: Test Apollo Supergraph
 
 on:
@@ -58,19 +59,19 @@ jobs:
         run: |
           cd router
           ./compose.sh
-          
+
           # Verify the supergraph file was created
           if [ ! -f "supergraph.graphql" ]; then
-            echo "❌ Supergraph composition failed - supergraph.graphql not created"
+            echo "❌ Supergraph composition failed - file not created"
             exit 1
           fi
-          
+
           # Verify the supergraph contains expected content
           if ! grep -q "join__Graph" supergraph.graphql; then
             echo "❌ Supergraph composition failed - missing join__Graph"
             exit 1
           fi
-          
+
           echo "✅ Supergraph composition successful"
 
   test-docker-builds:
@@ -87,13 +88,13 @@ jobs:
         run: |
           cd subgraphs
           docker build -t subgraphs:test .
-          
+
           # Verify the image was created
           if ! docker images | grep -q "subgraphs.*test"; then
             echo "❌ Docker build failed for subgraphs"
             exit 1
           fi
-          
+
           echo "✅ Subgraphs Docker build successful"
 
   test-scripts:
@@ -112,7 +113,7 @@ jobs:
               bash -n "$script" || exit 1
             fi
           done
-          
+
           # Test scripts in scripts directory
           if [ -d "scripts" ]; then
             for script in scripts/*.sh; do
@@ -122,7 +123,7 @@ jobs:
               fi
             done
           fi
-          
+
           echo "✅ All scripts have valid syntax"
 
       - name: Test script help options
@@ -133,7 +134,7 @@ jobs:
           ./kill-minikube.sh --help || exit 1
           ./setup-minikube.sh --help || exit 1
           ./setup-env.sh --help || exit 1
-          
+
           echo "✅ All script help options working"
 
   test-k8s-yaml:
@@ -158,7 +159,7 @@ jobs:
               fi
             done
           fi
-          
+
           # Test GitHub Actions workflows
           for workflow in .github/workflows/*.yaml; do
             if [ -f "$workflow" ]; then
@@ -166,17 +167,20 @@ jobs:
               yamllint "$workflow" || exit 1
             fi
           done
-          
+
           echo "✅ All YAML files have valid format"
 
       - name: Test Kubernetes manifest structure
         run: |
           # Basic structure validation without kubectl
           echo "Testing Kubernetes manifest structure..."
-          
+
           # Check if required files exist
-          required_files=("k8s/namespace.yaml" "k8s/subgraphs-deployment-clusterip.yaml" "k8s/router-deployment-clusterip.yaml" "k8s/ingress.yaml")
-          
+          required_files=("k8s/namespace.yaml" \
+            "k8s/subgraphs-deployment-clusterip.yaml" \
+            "k8s/router-deployment-clusterip.yaml" \
+            "k8s/ingress.yaml")
+
           for file in "${required_files[@]}"; do
             if [ ! -f "$file" ]; then
               echo "❌ Required Kubernetes manifest missing: $file"
@@ -184,7 +188,7 @@ jobs:
             fi
             echo "✅ Found: $file"
           done
-          
+
           # Check for basic Kubernetes resource types
           for file in k8s/*.yaml; do
             if [ -f "$file" ]; then
@@ -199,5 +203,5 @@ jobs:
               fi
             fi
           done
-          
+
           echo "✅ All Kubernetes manifests have basic structure"

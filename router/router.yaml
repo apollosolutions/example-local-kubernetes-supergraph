@@ -17,3 +17,8 @@ telemetry:
   instrumentation:
     spans:
       mode: spec_compliant
+
+# Enable health check endpoint on all interfaces
+health_check:
+  enabled: true
+  listen: 0.0.0.0:8088

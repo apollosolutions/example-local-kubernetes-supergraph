@@ -36,6 +36,11 @@ export const startSubgraphs = async (httpPort) => {
   const httpServer = http.createServer(app);
   const serverPort = process.env.PORT ?? httpPort;
 
+  // Add a simple health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Run each subgraph on the same http server, but at different paths
   for (const subgraph of LOCAL_SUBGRAPH_CONFIG) {
     const subgraphConfig = getLocalSubgraphConfig(subgraph.name);

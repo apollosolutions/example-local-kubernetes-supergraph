@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: router-only
+  labels:
+    name: router-only
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: router-config
+  namespace: router-only
+data:
+  config.yaml: |
+    sandbox:
+      enabled: true
+
+    supergraph:
+      introspection: true
+      listen: 0.0.0.0:4000
+      path: /dist/supergraph.graphql
+
+    homepage:
+      enabled: false
+
+    include_subgraph_errors:
+      all: true
+
+    telemetry:
+      instrumentation:
+        spans:
+          mode: spec_compliant
+
+    # Enable health check endpoint
+    health_check:
+      enabled: true
+      listen: 0.0.0.0:8088
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supergraph-schema
+  namespace: router-only
+data:
+  supergraph.graphql: |
+    schema
+      @link(url: "https://specs.apollo.dev/link/v1.0")
+      @link(url: "https://specs.apollo.dev/join/v0.5", for: EXECUTION)
+    {
+      query: Query
+    }
+
+    directive @join__directive(graphs: [join__Graph!], name: String!, args: join__DirectiveArguments) repeatable on SCHEMA | OBJECT | INTERFACE | FIELD_DEFINITION
+
+    directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
+
+    directive @join__field(graph: join__Graph, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean, overrideLabel: String, contextArguments: [join__ContextArgument!]) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+    directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+    directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+    directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true, isInterfaceObject: Boolean! = false) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+    directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on UNION
+
+    directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+    type Currency
+      @join__type(graph: USERS)
+    {
+      isoCode: String
+    }
+
+    input join__ContextArgument {
+      name: String!
+      type: String!
+      context: String!
+      selection: join__FieldValue!
+    }
+
+    scalar join__DirectiveArguments
+
+    scalar join__FieldSet
+
+    scalar join__FieldValue
+
+    enum join__Graph {
+      PRODUCTS @join__graph(name: "products", url: "http://localhost:4001/products/graphql")
+      REVIEWS @join__graph(name: "reviews", url: "http://localhost:4001/reviews/graphql")
+      USERS @join__graph(name: "users", url: "http://localhost:4001/users/graphql")
+    }
+
+    scalar link__Import
+
+    enum link__Purpose {
+      """
+      `SECURITY` features provide metadata necessary to securely resolve fields.
+      """
+      SECURITY
+
+      """
+      `EXECUTION` features provide metadata necessary for operation execution.
+      """
+      EXECUTION
+    }
+
+    """
+    A specific product sold by our store. This contains all the high level details but is not the purchasable item.
+    See Variant for more info.
+    """
+    type Product
+      @join__type(graph: PRODUCTS, key: "id")
+      @join__type(graph: REVIEWS, key: "id")
+    {
+      id: ID!
+      title: String @join__field(graph: PRODUCTS)
+      description: String @join__field(graph: PRODUCTS)
+      mediaUrl: String @join__field(graph: PRODUCTS)
+      releaseDate: String @join__field(graph: PRODUCTS)
+      price: Float! @join__field(graph: PRODUCTS)
+      category: ProductCategory @join__field(graph: PRODUCTS)
+      reviews: [Review!] @join__field(graph: REVIEWS)
+    }
+
+    enum ProductCategory
+      @join__type(graph: PRODUCTS)
+    {
+      ONE @join__enumValue(graph: PRODUCTS)
+      TWO @join__enumValue(graph: PRODUCTS)
+    }
+
+    """Search filters for when returning Products"""
+    input ProductSearchInput
+      @join__type(graph: PRODUCTS)
+    {
+      titleStartsWith: String
+      category: ProductCategory
+    }
+
+    type Query
+      @join__type(graph: PRODUCTS)
+      @join__type(graph: REVIEWS)
+      @join__type(graph: USERS)
+    {
+      products(search: ProductSearchInput): [Product!]! @join__field(graph: PRODUCTS)
+      product(id: ID!): Product @join__field(graph: PRODUCTS)
+      reviews: [Review!]! @join__field(graph: REVIEWS)
+      users: [User!]! @join__field(graph: USERS)
+    }
+
+    """
+    A review of a product. This contains the review text and rating.
+    """
+    type Review
+      @join__type(graph: REVIEWS, key: "id")
+    {
+      id: ID!
+      text: String!
+      rating: Int!
+      product: Product!
+    }
+
+    """
+    A user of our store. This contains the user's profile information.
+    """
+    type User
+      @join__type(graph: USERS, key: "id")
+    {
+      id: ID!
+      name: String!
+      email: String!
+      currency: Currency!
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apollo-router
+  namespace: router-only
+  labels:
+    app: apollo-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apollo-router
+  template:
+    metadata:
+      labels:
+        app: apollo-router
+    spec:
+      containers:
+      - name: apollo-router
+        image: ghcr.io/apollographql/router:v2.5.0
+        ports:
+        - containerPort: 4000
+          name: graphql
+        - containerPort: 8088
+          name: health
+        env:
+        - name: APOLLO_GRAPH_REF
+          value: "${APOLLO_GRAPH_REF}"
+        - name: APOLLO_KEY
+          value: "${APOLLO_KEY}"
+        - name: PORT
+          value: "4000"
+        volumeMounts:
+        - name: router-config
+          mountPath: /dist/config.yaml
+          subPath: config.yaml
+        - name: supergraph-schema
+          mountPath: /dist/supergraph.graphql
+          subPath: supergraph.graphql
+
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+      volumes:
+      - name: router-config
+        configMap:
+          name: router-config
+      - name: supergraph-schema
+        configMap:
+          name: supergraph-schema
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apollo-router-service
+  namespace: router-only
+  labels:
+    app: apollo-router
+spec:
+  selector:
+    app: apollo-router
+  ports:
+  - name: graphql
+    port: 4000
+    targetPort: 4000
+    nodePort: 30400
+  - name: health
+    port: 8088
+    targetPort: 8088
+    nodePort: 30408
+  type: NodePort

@@ -30,4 +30,3 @@ jobs:
           fi
 
           echo "✅ Subgraphs Docker build successful"
-

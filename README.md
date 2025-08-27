@@ -13,7 +13,6 @@ Run the Apollo Supergraph locally without Kubernetes:
 ./run-local.sh
 
 
-
 # Show help
 ./run-local.sh --help
 ```

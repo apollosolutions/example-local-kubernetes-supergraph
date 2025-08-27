@@ -224,19 +224,26 @@ if [ "$TEST_YAML" = true ]; then
     if ! command_exists yamllint; then
         print_warning "yamllint not found, installing..."
         if command_exists pip3; then
-            pip3 install yamllint
+            pip3 install --user yamllint
+            # Add user bin to PATH if not already there
+            export PATH="$HOME/.local/bin:$PATH"
         elif command_exists pip; then
-            pip install yamllint
+            pip install --user yamllint
+            # Add user bin to PATH if not already there
+            export PATH="$HOME/.local/bin:$PATH"
         else
             print_error "pip not found, cannot install yamllint"
             exit 1
         fi
     fi
     
+    # Use python3 -m yamllint which is more reliable
+    YAMLLINT_CMD="python3 -m yamllint"
+    
     # Test all YAML files in k8s directory
     if [ -d "k8s" ]; then
         print_status "Linting Kubernetes manifests..."
-        yamllint k8s/ || {
+        "$YAMLLINT_CMD" k8s/ || {
             print_error "YAML linting failed"
             exit 1
         }
@@ -248,7 +255,7 @@ if [ "$TEST_YAML" = true ]; then
     # Test router configuration YAML
     if file_exists "router/router.yaml"; then
         print_status "Linting router configuration..."
-        yamllint router/router.yaml || {
+        "$YAMLLINT_CMD" router/router.yaml || {
             print_error "Router configuration YAML linting failed"
             exit 1
         }

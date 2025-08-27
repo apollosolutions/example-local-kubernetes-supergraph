@@ -2,43 +2,21 @@
 
 set -e
 
-echo "🔧 Setting up minikube for Apollo Supergraph deployment..."
+# Source shared utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/scripts/utils.sh"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+show_script_header "Minikube Setup" "Setting up minikube for Apollo Supergraph deployment"
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if minikube is installed
-if ! command -v minikube &> /dev/null; then
-    print_error "minikube is not installed. Please install minikube first:"
-    echo "  https://minikube.sigs.k8s.io/docs/start/"
+# Validate required tools
+if ! validate_required_tools; then
     exit 1
 fi
 
-print_success "minikube is installed"
+print_success "All required tools are installed"
 
 # Start minikube if not running
-if ! minikube status | grep -q "Running"; then
+if ! minikube_is_running; then
     print_status "Starting minikube..."
     minikube start --memory=4096 --cpus=2 --disk-size=20g
     print_success "minikube started"
@@ -77,3 +55,5 @@ echo "🔍 Useful commands:"
 echo "  - Open minikube dashboard: minikube dashboard"
 echo "  - Get minikube IP: minikube ip"
 echo "  - SSH into minikube: minikube ssh"
+
+show_script_footer "Minikube Setup"

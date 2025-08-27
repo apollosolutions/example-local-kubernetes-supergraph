@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: subgraphs
-  namespace: apollo-supergraph
+  namespace: ${NAMESPACE}
   labels:
     app: subgraphs
 spec:
-  replicas: 2
+  replicas: ${SUBGRAPHS_REPLICAS}
   selector:
     matchLabels:
       app: subgraphs
@@ -50,7 +50,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: subgraphs-service
-  namespace: apollo-supergraph
+  namespace: ${NAMESPACE}
   labels:
     app: subgraphs
 spec:

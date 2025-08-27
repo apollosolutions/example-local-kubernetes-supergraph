@@ -1,7 +1,42 @@
+# Environment files
 .env
+router/.env
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-node_modules
+# Generated files
+router/supergraph.graphql
 
 # IDE files
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.backup
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+
+# Build artifacts
+dist/
+build/

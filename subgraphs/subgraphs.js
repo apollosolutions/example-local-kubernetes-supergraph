@@ -58,6 +58,8 @@ export const startSubgraphs = async (httpPort) => {
       schema,
       // For a real subgraph introspection should remain off, but for demo we enabled
       introspection: true,
+      // Disable CSRF protection for Kubernetes deployment
+      csrfPrevention: false,
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
         ApolloServerPluginUsageReportingDisabled()

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "NODE_ENV=dev nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "validate": "node -c index.js && echo 'Syntax validation passed'"
   },
   "dependencies": {
     "@as-integrations/express5": "^1.1.2",

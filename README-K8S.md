@@ -1,10 +1,13 @@
 # Apollo Supergraph - Kubernetes Deployment Guide
 
-This guide explains how to deploy the Apollo Supergraph (Router + Subgraphs) to a local minikube Kubernetes cluster.
+This guide provides detailed instructions for deploying the Apollo Supergraph (Router + Subgraphs) to a local minikube Kubernetes cluster.
+
+**For general information and local development, see the main [README.md](README.md).**
+**For detailed setup and configuration instructions, see [SETUP.md](SETUP.md).**
 
 ## Architecture Overview
 
-The deployment consists of:
+The Kubernetes deployment consists of:
 
 1. **Apollo Router** - GraphQL gateway that routes requests to subgraphs
 2. **Subgraphs** - Monolithic Node.js application containing three GraphQL subgraphs:
@@ -14,64 +17,45 @@ The deployment consists of:
 3. **Ingress** - Nginx ingress controller for external access
 4. **Services** - Kubernetes services for internal communication
 
-## Prerequisites
-
-- [minikube](https://minikube.sigs.k8s.io/docs/start/) installed
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
-- [Docker](https://docs.docker.com/get-docker/) installed
-
-## Environment Setup
-
-Before deploying, you need to configure your Apollo Studio credentials:
-
-1. **Create environment file**:
-   ```bash
-   cp router/env.example router/.env
-   ```
-
-2. **Edit the `.env` file** with your actual Apollo Studio credentials:
-   ```bash
-   # Your Apollo Graph reference (format: graph-name@variant)
-   APOLLO_GRAPH_REF=your-graph-name@your-variant
-   
-   # Your Apollo Studio API key
-   APOLLO_KEY=service:your-graph-name:your-api-key
-   ```
-
-3. **Verify the file is ignored by git**:
-   ```bash
-   # The .env file should be listed in .gitignore
-   cat .gitignore | grep .env
-   ```
-
 ## Quick Start
 
-### 1. Setup environment
-
-```bash
-# Copy and configure your Apollo Studio credentials
-cp router/env.example router/.env
-# Edit router/.env with your actual credentials
-```
-
-### 2. Setup minikube
+### Setup minikube
 
 ```bash
 # Setup minikube with required addons
 ./setup-minikube.sh
 ```
 
-### 3. Deploy the applications
+### Deploy the applications
+
+Deploy the Apollo Supergraph (router + subgraphs):
 
 ```bash
-# Deploy everything to minikube
-./deploy.sh
+# Deploy Apollo Supergraph
+./run-k8s.sh
+
+# Deploy with custom number of replicas
+./run-k8s.sh --replicas 3
+
+# Show help
+./run-k8s.sh --help
 ```
 
-### 3. Access the applications
+### Access the applications
 
-After deployment, you'll need to add the minikube IP to your `/etc/hosts` file:
+After deployment, you have several options to access the Apollo Router:
 
+**Option 1: Minikube Tunnel (Recommended)**
+```bash
+# Start minikube tunnel (keep this running in a terminal)
+minikube tunnel
+
+# Access via minikube IP
+minikube ip  # Get the IP (e.g., 192.168.49.2)
+# Then access: http://192.168.49.2:4000/graphql
+```
+
+**Option 2: Ingress with /etc/hosts**
 ```bash
 # Get minikube IP
 minikube ip
@@ -84,6 +68,25 @@ Then access:
 - **Apollo Router**: http://apollo-router.local
 - **Health Check**: http://apollo-router.local:8088
 
+**Option 3: Port Forwarding**
+```bash
+# Forward router to localhost
+kubectl port-forward svc/apollo-router-service 4000:4000 -n apollo-supergraph
+
+# Then access: http://localhost:4000/graphql
+```
+
+**Note**: If using minikube tunnel, keep the terminal window open while accessing the services.
+
+## Deployment Configuration
+
+### Apollo Supergraph Deployment
+- **Namespace**: `apollo-supergraph`
+- **Components**: Router + Subgraphs + Ingress
+- **Service Type**: ClusterIP (internal communication)
+- **Replicas**: 2 each (configurable)
+- **Access**: Via Ingress (apollo-router.local) or port forwarding
+
 ## Security Best Practices
 
 - **Never commit secrets to version control**: The `.env` file is already in `.gitignore`
@@ -91,201 +94,84 @@ Then access:
 - **Rotate API keys regularly**: Keep your Apollo Studio API keys secure and rotate them periodically
 - **Limit access**: Only grant necessary permissions to your Apollo Studio API keys
 
-## Manual Deployment Steps
+## Testing
 
-If you prefer to deploy manually, follow these steps:
-
-### 1. Build the subgraphs Docker image
+### Kubernetes Testing
 
 ```bash
-# Set Docker environment to use minikube's Docker daemon
-eval $(minikube docker-env)
+# Test Apollo Supergraph deployment
+./test-k8s.sh
 
-# Build the image
-cd subgraphs
-docker build -t subgraphs:latest .
-cd ..
-```
-
-### 2. Create namespace
-
-```bash
-kubectl apply -f k8s/namespace.yaml
-```
-
-### 3. Apply ConfigMaps
-
-```bash
-kubectl apply -f k8s/configmaps.yaml
-```
-
-### 4. Deploy subgraphs
-
-```bash
-kubectl apply -f k8s/subgraphs-deployment.yaml
-kubectl wait --for=condition=available --timeout=300s deployment/subgraphs -n apollo-supergraph
-```
-
-### 5. Deploy Apollo Router
-
-```bash
-kubectl apply -f k8s/router-deployment.yaml
-kubectl wait --for=condition=available --timeout=300s deployment/apollo-router -n apollo-supergraph
-```
-
-### 6. Apply Ingress
-
-```bash
-kubectl apply -f k8s/ingress.yaml
-```
-
-## Configuration Details
-
-### Subgraphs Configuration
-
-The subgraphs application runs as a monolithic service with three GraphQL endpoints:
-- `/products/graphql` - Product catalog
-- `/reviews/graphql` - Product reviews
-- `/users/graphql` - User management
-
-### Router Configuration
-
-The Apollo Router is configured to:
-- Listen on port 4000
-- Connect to subgraphs via Kubernetes service names
-- Enable introspection for development
-- Include subgraph errors in responses
-
-### Service Discovery
-
-The router connects to subgraphs using Kubernetes service names:
-- `http://subgraphs-service.apollo-supergraph.svc.cluster.local:4001/products/graphql`
-- `http://subgraphs-service.apollo-supergraph.svc.cluster.local:4001/reviews/graphql`
-- `http://subgraphs-service.apollo-supergraph.svc.cluster.local:4001/users/graphql`
-
-## Scaling
-
-Both applications are configured with 2 replicas by default. You can scale them:
-
-```bash
-# Scale subgraphs
-kubectl scale deployment subgraphs --replicas=3 -n apollo-supergraph
-
-# Scale router
-kubectl scale deployment apollo-router --replicas=3 -n apollo-supergraph
-```
-
-## Monitoring and Debugging
-
-### View resources
-
-```bash
-# View all resources in the namespace
-kubectl get all -n apollo-supergraph
-
-# View pods
-kubectl get pods -n apollo-supergraph
-
-# View services
-kubectl get svc -n apollo-supergraph
-
-# View ingress
-kubectl get ingress -n apollo-supergraph
-```
-
-### View logs
-
-```bash
-# Router logs
-kubectl logs -f deployment/apollo-router -n apollo-supergraph
-
-# Subgraphs logs
-kubectl logs -f deployment/subgraphs -n apollo-supergraph
-
-# Specific pod logs
-kubectl logs -f <pod-name> -n apollo-supergraph
-```
-
-### Port forwarding (for local development)
-
-```bash
-# Forward router to localhost
-kubectl port-forward svc/apollo-router-service 4000:4000 -n apollo-supergraph
-
-# Forward subgraphs to localhost
-kubectl port-forward svc/subgraphs-service 4001:4001 -n apollo-supergraph
-```
-
-### Access minikube dashboard
-
-```bash
-minikube dashboard
-```
-
-## Testing the Deployment
-
-### Test GraphQL queries
-
-```bash
-# Test the router
-curl -X POST http://apollo-router.local/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ products { id title price } }"}'
-
-# Test subgraphs directly (via port-forward)
-curl -X POST http://localhost:4001/products/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ products { id title price } }"}'
-```
-
-### Health checks
-
-```bash
-# Router health
-curl http://apollo-router.local:8088/health
-
-# Subgraphs health
-curl http://localhost:4001/products/graphql
+# Show help
+./test-k8s.sh --help
 ```
 
 ## Cleanup
 
-To remove all resources:
-
 ```bash
+# Clean up deployment
 ./cleanup.sh
-```
 
-Or manually:
-
-```bash
-kubectl delete namespace apollo-supergraph
+# Stop and delete minikube cluster
+./kill-minikube.sh
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Image pull errors**: Make sure you're using minikube's Docker daemon:
+1. **Apollo Router fails to start with "no valid license" error**: The router requires valid Apollo Studio credentials. You have two options:
+   
+   **Option A: Use valid Apollo Studio credentials**
+   ```bash
+   # Edit router/.env with your actual credentials
+   APOLLO_GRAPH_REF=your-actual-graph-name@your-variant
+   APOLLO_KEY=service:your-actual-graph-name:your-actual-api-key
+   ```
+   
+   **Option B: Run subgraphs locally first**
+   ```bash
+   # Start subgraphs locally
+   cd subgraphs && npm start
+   
+   # Then deploy router (configured to connect to localhost:4001)
+   ./run-k8s.sh
+   ```
+
+2. **NodePort services not accessible**: Start minikube tunnel for NodePort access:
+   ```bash
+   minikube tunnel
+   ```
+
+3. **Image pull errors**: Make sure you're using minikube's Docker daemon:
    ```bash
    eval $(minikube docker-env)
    ```
 
-2. **Ingress not working**: Check if ingress controller is running:
+4. **Ingress not working**: Check if ingress controller is running:
    ```bash
    kubectl get pods -n ingress-nginx
    ```
 
-3. **Service connectivity**: Check if services are properly configured:
+5. **Service connectivity**: Check if services are properly configured:
    ```bash
-   kubectl get svc -n apollo-supergraph
-   kubectl describe svc apollo-router-service -n apollo-supergraph
+   kubectl get svc -n <namespace>
+   kubectl describe svc <service-name> -n <namespace>
    ```
 
-4. **Pod startup issues**: Check pod events and logs:
+6. **Pod startup issues**: Check pod events and logs:
    ```bash
-   kubectl describe pod <pod-name> -n apollo-supergraph
-   kubectl logs <pod-name> -n apollo-supergraph
+   kubectl describe pod <pod-name> -n <namespace>
+   kubectl logs <pod-name> -n <namespace>
+   ```
+
+7. **Router not connecting to subgraphs**: Make sure subgraphs are running:
+   ```bash
+   # Check if subgraphs are running
+   kubectl get pods -n apollo-supergraph
+   
+   # If not running, redeploy
+   ./run-k8s.sh
    ```
 
 ### Resource Requirements
@@ -312,8 +198,23 @@ k8s/
 ├── router-deployment.yaml   # Apollo Router deployment and service
 └── ingress.yaml            # Ingress configuration
 
-deploy.sh                   # Main deployment script
-cleanup.sh                  # Cleanup script
+run-k8s.sh                  # Kubernetes deployment script
+cleanup.sh                  # Unified cleanup script
+test-k8s.sh                 # Kubernetes test script
 setup-minikube.sh           # Minikube setup script
 subgraphs/Dockerfile        # Subgraphs Docker image
 ```
+
+## Script Options Summary
+
+### run-k8s.sh
+- `./run-k8s.sh` - Deploy Apollo Supergraph (router + subgraphs)
+- `./run-k8s.sh --replicas N` - Deploy with N replicas
+- `./run-k8s.sh --help` - Show help
+
+### cleanup.sh
+- `./cleanup.sh` - Clean up Apollo Supergraph namespace
+
+### test-k8s.sh
+- `./test-k8s.sh` - Test Apollo Supergraph deployment
+- `./test-k8s.sh --help` - Show help

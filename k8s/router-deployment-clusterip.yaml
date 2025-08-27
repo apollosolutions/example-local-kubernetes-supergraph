@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: apollo-router
-  namespace: apollo-supergraph
+  namespace: ${NAMESPACE}
   labels:
     app: apollo-router
 spec:
-  replicas: 2
+  replicas: ${ROUTER_REPLICAS}
   selector:
     matchLabels:
       app: apollo-router
@@ -37,7 +37,7 @@ spec:
         - name: supergraph-schema
           mountPath: /dist/supergraph.graphql
           subPath: supergraph.graphql
-        command: ["--config", "/dist/config.yaml"]
+        args: ["--config", "/dist/config.yaml", "--supergraph", "/dist/supergraph.graphql"]
         resources:
           requests:
             memory: "128Mi"
@@ -69,7 +69,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: apollo-router-service
-  namespace: apollo-supergraph
+  namespace: ${NAMESPACE}
   labels:
     app: apollo-router
 spec:

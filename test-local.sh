@@ -27,12 +27,14 @@ show_usage() {
     echo "  -c, --composition      Test supergraph composition only"
     echo "  -d, --docker           Test Docker builds only"
     echo "  -r, --router           Test router only"
+    echo "  -y, --yaml             Test YAML formatting only"
     echo "  -h, --help             Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                     # Run all tests"
     echo "  $0 --subgraphs         # Test subgraphs only"
     echo "  $0 --composition       # Test composition only"
+    echo "  $0 --yaml              # Test YAML formatting only"
 }
 
 # Default values
@@ -40,6 +42,7 @@ TEST_SUBGRAPHS=true
 TEST_COMPOSITION=true
 TEST_DOCKER=true
 TEST_ROUTER=true
+TEST_YAML=true
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -49,6 +52,7 @@ while [[ $# -gt 0 ]]; do
             TEST_COMPOSITION=true
             TEST_DOCKER=true
             TEST_ROUTER=true
+            TEST_YAML=true
             shift
             ;;
         -s|--subgraphs)
@@ -56,6 +60,7 @@ while [[ $# -gt 0 ]]; do
             TEST_COMPOSITION=false
             TEST_DOCKER=false
             TEST_ROUTER=false
+            TEST_YAML=false
             shift
             ;;
         -c|--composition)
@@ -63,6 +68,7 @@ while [[ $# -gt 0 ]]; do
             TEST_COMPOSITION=true
             TEST_DOCKER=false
             TEST_ROUTER=false
+            TEST_YAML=false
             shift
             ;;
         -d|--docker)
@@ -70,6 +76,7 @@ while [[ $# -gt 0 ]]; do
             TEST_COMPOSITION=false
             TEST_DOCKER=true
             TEST_ROUTER=false
+            TEST_YAML=false
             shift
             ;;
         -r|--router)
@@ -77,6 +84,15 @@ while [[ $# -gt 0 ]]; do
             TEST_COMPOSITION=false
             TEST_DOCKER=false
             TEST_ROUTER=true
+            TEST_YAML=false
+            shift
+            ;;
+        -y|--yaml)
+            TEST_SUBGRAPHS=false
+            TEST_COMPOSITION=false
+            TEST_DOCKER=false
+            TEST_ROUTER=false
+            TEST_YAML=true
             shift
             ;;
         -h|--help)
@@ -200,6 +216,50 @@ if [ "$TEST_DOCKER" = true ]; then
     print_success "Docker build test passed"
 fi
 
+# Test YAML formatting
+if [ "$TEST_YAML" = true ]; then
+    print_status "Testing YAML formatting..."
+    
+    # Check if yamllint is available
+    if ! command_exists yamllint; then
+        print_warning "yamllint not found, installing..."
+        if command_exists pip3; then
+            pip3 install yamllint
+        elif command_exists pip; then
+            pip install yamllint
+        else
+            print_error "pip not found, cannot install yamllint"
+            exit 1
+        fi
+    fi
+    
+    # Test all YAML files in k8s directory
+    if [ -d "k8s" ]; then
+        print_status "Linting Kubernetes manifests..."
+        yamllint k8s/ || {
+            print_error "YAML linting failed"
+            exit 1
+        }
+        print_success "Kubernetes manifests YAML linting passed"
+    else
+        print_warning "k8s directory not found, skipping YAML linting"
+    fi
+    
+    # Test router configuration YAML
+    if file_exists "router/router.yaml"; then
+        print_status "Linting router configuration..."
+        yamllint router/router.yaml || {
+            print_error "Router configuration YAML linting failed"
+            exit 1
+        }
+        print_success "Router configuration YAML linting passed"
+    else
+        print_warning "router/router.yaml not found, skipping"
+    fi
+    
+    print_success "YAML formatting test passed"
+fi
+
 # Test router and subgraphs functionality
 if [ "$TEST_ROUTER" = true ]; then
     print_status "Testing router and subgraphs functionality..."
@@ -310,6 +370,9 @@ if [ "$TEST_COMPOSITION" = true ]; then
 fi
 if [ "$TEST_DOCKER" = true ]; then
     echo "  ✅ Docker builds"
+fi
+if [ "$TEST_YAML" = true ]; then
+    echo "  ✅ YAML formatting"
 fi
 if [ "$TEST_ROUTER" = true ]; then
     echo "  ✅ Router and subgraphs functionality"

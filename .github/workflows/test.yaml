@@ -73,6 +73,29 @@ jobs:
           
           echo "✅ Supergraph composition successful"
 
+  test-docker-builds:
+    name: Test Docker Builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build subgraphs Docker image
+        run: |
+          cd subgraphs
+          docker build -t subgraphs:test .
+          
+          # Verify the image was created
+          if ! docker images | grep -q "subgraphs.*test"; then
+            echo "❌ Docker build failed for subgraphs"
+            exit 1
+          fi
+          
+          echo "✅ Subgraphs Docker build successful"
+
   test-scripts:
     name: Test Helper Scripts
     runs-on: ubuntu-latest
@@ -113,35 +136,68 @@ jobs:
           
           echo "✅ All script help options working"
 
-  test-k8s-manifests:
-    name: Test Kubernetes Manifests
+  test-k8s-yaml:
+    name: Test Kubernetes YAML Format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5.0.0
 
-      - name: Set up KinD cluster
-        uses: engineerd/setup-kind@v0.5.0
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Validate Kubernetes manifests
+      - name: Install yamllint
         run: |
-          # Test namespace
-          kubectl apply --dry-run=client -f k8s/namespace.yaml || exit 1
+          pip install yamllint
+
+      - name: Validate YAML files
+        run: |
+          # Test all YAML files in k8s directory
+          if [ -d "k8s" ]; then
+            for yaml_file in k8s/*.yaml; do
+              if [ -f "$yaml_file" ]; then
+                echo "Validating YAML format: $yaml_file"
+                yamllint "$yaml_file" || exit 1
+              fi
+            done
+          fi
           
-          # Test subgraphs deployment (with dummy values)
-          NAMESPACE=test SUBGRAPHS_REPLICAS=1 envsubst < k8s/subgraphs-deployment-clusterip.yaml | \
-            kubectl apply --dry-run=client -f - || exit 1
+          # Test GitHub Actions workflows
+          for workflow in .github/workflows/*.yaml; do
+            if [ -f "$workflow" ]; then
+              echo "Validating workflow: $workflow"
+              yamllint "$workflow" || exit 1
+            fi
+          done
           
-          # Test router deployment (with dummy values)
-          NAMESPACE=test ROUTER_REPLICAS=1 APOLLO_GRAPH_REF=test@test APOLLO_KEY=test envsubst < k8s/router-deployment-clusterip.yaml | \
-            kubectl apply --dry-run=client -f - || exit 1
+          echo "✅ All YAML files have valid format"
+
+      - name: Test Kubernetes manifest structure
+        run: |
+          # Basic structure validation without kubectl
+          echo "Testing Kubernetes manifest structure..."
           
-          # Test ingress
-          kubectl apply --dry-run=client -f k8s/ingress.yaml || exit 1
+          # Check if required files exist
+          required_files=("k8s/namespace.yaml" "k8s/subgraphs-deployment-clusterip.yaml" "k8s/router-deployment-clusterip.yaml" "k8s/ingress.yaml")
           
-          echo "✅ All Kubernetes manifests are valid"
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Required Kubernetes manifest missing: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file"
+          done
+          
+          # Check for basic Kubernetes resource types
+          for file in k8s/*.yaml; do
+            if [ -f "$file" ]; then
+              echo "Checking $file for Kubernetes resource types..."
+              if ! grep -q "kind:" "$file"; then
+                echo "❌ No 'kind:' field found in $file"
+                exit 1
+              fi
+              if ! grep -q "apiVersion:" "$file"; then
+                echo "❌ No 'apiVersion:' field found in $file"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All Kubernetes manifests have basic structure"

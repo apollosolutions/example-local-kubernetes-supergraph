@@ -221,24 +221,18 @@ if [ "$TEST_YAML" = true ]; then
     print_status "Testing YAML formatting..."
     
     # Check if yamllint is available
-    if ! command_exists yamllint; then
-        print_warning "yamllint not found, installing..."
-        if command_exists pip3; then
-            pip3 install --user yamllint
-            # Add user bin to PATH if not already there
-            export PATH="$HOME/.local/bin:$PATH"
-        elif command_exists pip; then
-            pip install --user yamllint
-            # Add user bin to PATH if not already there
-            export PATH="$HOME/.local/bin:$PATH"
-        else
-            print_error "pip not found, cannot install yamllint"
-            exit 1
-        fi
+    YAMLLINT_CMD=""
+    if python3 -c "import yamllint" 2>/dev/null; then
+        YAMLLINT_CMD="python3 -m yamllint"
+        print_status "yamllint found via python3 -m yamllint"
+    elif command_exists yamllint; then
+        YAMLLINT_CMD="yamllint"
+        print_status "yamllint found in PATH"
+    else
+        print_warning "yamllint not available, skipping YAML linting tests"
+        print_info "To enable YAML linting, install yamllint: pip3 install yamllint"
+        return 0
     fi
-    
-    # Use python3 -m yamllint which is more reliable
-    YAMLLINT_CMD="python3 -m yamllint"
     
     # Test all YAML files in k8s directory
     if [ -d "k8s" ]; then

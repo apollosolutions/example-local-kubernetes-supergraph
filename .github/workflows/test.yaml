@@ -120,6 +120,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5.0.0
 
+      - name: Set up KinD cluster
+        uses: engineerd/setup-kind@v0.5.0
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -128,17 +131,17 @@ jobs:
       - name: Validate Kubernetes manifests
         run: |
           # Test namespace
-          kubectl apply --dry-run=client --validate=false -f k8s/namespace.yaml || exit 1
+          kubectl apply --dry-run=client -f k8s/namespace.yaml || exit 1
           
           # Test subgraphs deployment (with dummy values)
           NAMESPACE=test SUBGRAPHS_REPLICAS=1 envsubst < k8s/subgraphs-deployment-clusterip.yaml | \
-            kubectl apply --dry-run=client --validate=false -f - || exit 1
+            kubectl apply --dry-run=client -f - || exit 1
           
           # Test router deployment (with dummy values)
           NAMESPACE=test ROUTER_REPLICAS=1 APOLLO_GRAPH_REF=test@test APOLLO_KEY=test envsubst < k8s/router-deployment-clusterip.yaml | \
-            kubectl apply --dry-run=client --validate=false -f - || exit 1
+            kubectl apply --dry-run=client -f - || exit 1
           
           # Test ingress
-          kubectl apply --dry-run=client --validate=false -f k8s/ingress.yaml || exit 1
+          kubectl apply --dry-run=client -f k8s/ingress.yaml || exit 1
           
           echo "✅ All Kubernetes manifests are valid"

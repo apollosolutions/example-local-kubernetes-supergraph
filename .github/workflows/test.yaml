@@ -1,23 +1,207 @@
+---
+name: Test Apollo Supergraph
+
 on:
+  pull_request:
+    branches:
+      - main
   push:
-    paths:
-      - Dockerfile
-      - router.yaml
-      - .github/workflows/test.yaml
-      - .github/workflows/supergraph.graphql
+    branches:
+      - main
+
 jobs:
-  test:
-    name: Smoke test Router
+  test-subgraphs:
+    name: Test Subgraphs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5.0.0
-      - name: Build Docker image
-        run: docker build -t router .
-      - name: Run Router
-        run: docker run -d --name router -p 4000:4000 -v ./.github/workflows/supergraph.graphql:/dist/supergraph.graphql router -s supergraph.graphql
-      - name: Wait for Router to start
-        run: sleep 5
-      - name: Test Router
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: subgraphs/package-lock.json
+
+      - name: Install dependencies
         run: |
-          curl http://localhost:4000 -d '{"query": "query{__typename}"}' -H "Content-Type: application/json"
+          cd subgraphs
+          npm ci
+
+      - name: Test subgraphs validation
+        run: |
+          cd subgraphs
+          if npm run | grep -q "validate"; then
+            npm run validate
+          else
+            echo "No validate script found, skipping"
+          fi
+
+  test-supergraph-composition:
+    name: Test Supergraph Composition
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Rover CLI
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/latest | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+
+      - name: Test supergraph composition
+        run: |
+          cd router
+          ./compose.sh
+
+          # Verify the supergraph file was created
+          if [ ! -f "supergraph.graphql" ]; then
+            echo "❌ Supergraph composition failed - file not created"
+            exit 1
+          fi
+
+          # Verify the supergraph contains expected content
+          if ! grep -q "join__Graph" supergraph.graphql; then
+            echo "❌ Supergraph composition failed - missing join__Graph"
+            exit 1
+          fi
+
+          echo "✅ Supergraph composition successful"
+
+  test-docker-builds:
+    name: Test Docker Builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build subgraphs Docker image
+        run: |
+          cd subgraphs
+          docker build -t subgraphs:test .
+
+          # Verify the image was created
+          if ! docker images | grep -q "subgraphs.*test"; then
+            echo "❌ Docker build failed for subgraphs"
+            exit 1
+          fi
+
+          echo "✅ Subgraphs Docker build successful"
+
+  test-scripts:
+    name: Test Helper Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Test script syntax
+        run: |
+          # Test that all scripts have valid syntax
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Testing syntax for $script"
+              bash -n "$script" || exit 1
+            fi
+          done
+
+          # Test scripts in scripts directory
+          if [ -d "scripts" ]; then
+            for script in scripts/*.sh; do
+              if [ -f "$script" ]; then
+                echo "Testing syntax for $script"
+                bash -n "$script" || exit 1
+              fi
+            done
+          fi
+
+          echo "✅ All scripts have valid syntax"
+
+      - name: Test script help options
+        run: |
+          # Test that scripts with help options work
+          ./run-k8s.sh --help || exit 1
+          ./cleanup-k8s.sh --help || exit 1
+          ./kill-minikube.sh --help || exit 1
+          ./setup-minikube.sh --help || exit 1
+          ./setup-env.sh --help || exit 1
+
+          echo "✅ All script help options working"
+
+  test-k8s-yaml:
+    name: Test Kubernetes YAML Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+
+      - name: Install yamllint
+        run: |
+          pip install yamllint
+
+      - name: Validate YAML files
+        run: |
+          # Test all YAML files in k8s directory
+          if [ -d "k8s" ]; then
+            for yaml_file in k8s/*.yaml; do
+              if [ -f "$yaml_file" ]; then
+                echo "Validating YAML format: $yaml_file"
+                yamllint "$yaml_file" || exit 1
+              fi
+            done
+          fi
+
+          # Test GitHub Actions workflows
+          for workflow in .github/workflows/*.yaml; do
+            if [ -f "$workflow" ]; then
+              echo "Validating workflow: $workflow"
+              yamllint "$workflow" || exit 1
+            fi
+          done
+
+          echo "✅ All YAML files have valid format"
+
+      - name: Test Kubernetes manifest structure
+        run: |
+          # Basic structure validation without kubectl
+          echo "Testing Kubernetes manifest structure..."
+
+          # Check if required files exist
+          required_files=("k8s/namespace.yaml" \
+            "k8s/subgraphs-deployment-clusterip.yaml" \
+            "k8s/router-deployment-clusterip.yaml" \
+            "k8s/ingress.yaml")
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Required Kubernetes manifest missing: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file"
+          done
+
+          # Check for basic Kubernetes resource types
+          for file in k8s/*.yaml; do
+            if [ -f "$file" ]; then
+              echo "Checking $file for Kubernetes resource types..."
+              if ! grep -q "kind:" "$file"; then
+                echo "❌ No 'kind:' field found in $file"
+                exit 1
+              fi
+              if ! grep -q "apiVersion:" "$file"; then
+                echo "❌ No 'apiVersion:' field found in $file"
+                exit 1
+              fi
+            fi
+          done
+
+          echo "✅ All Kubernetes manifests have basic structure"

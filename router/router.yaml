@@ -1,0 +1,25 @@
+# $schema: configuration_schema.json
+
+sandbox:
+  enabled: true
+
+supergraph:
+  introspection: true
+  listen: 0.0.0.0:${env.PORT:-4000}
+  path: /graphql
+
+homepage:
+  enabled: false
+
+include_subgraph_errors:
+  all: true
+
+telemetry:
+  instrumentation:
+    spans:
+      mode: spec_compliant
+
+# Enable health check endpoint on all interfaces
+health_check:
+  enabled: true
+  listen: 0.0.0.0:8088

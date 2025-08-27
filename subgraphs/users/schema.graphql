@@ -1,0 +1,25 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.8", import: ["@key", "@shareable"])
+
+type Query {
+  """
+  Get the current user from our fake "auth" headers
+  Set the "x-user-id" header to the user id.
+  """
+  user: User
+  allUsers: [User]
+}
+
+"An user account in our system"
+# Users Subgraph
+type User @key(fields: "id") {
+  id: ID!
+  username: String!
+  loyaltyPoints: Int
+  shippingAddress: String
+  currency: Currency
+}
+
+type Currency {
+  isoCode: String
+}

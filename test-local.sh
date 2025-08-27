@@ -222,12 +222,12 @@ if [ "$TEST_YAML" = true ]; then
     
     # Check if yamllint is available
     YAMLLINT_CMD=""
-    if python3 -c "import yamllint" 2>/dev/null; then
-        YAMLLINT_CMD="python3 -m yamllint"
-        print_status "yamllint found via python3 -m yamllint"
-    elif command_exists yamllint; then
+    if command_exists yamllint; then
         YAMLLINT_CMD="yamllint"
         print_status "yamllint found in PATH"
+    elif python3 -c "import yamllint" 2>/dev/null; then
+        YAMLLINT_CMD="python3 -m yamllint"
+        print_status "yamllint found via python3 -m yamllint"
     else
         print_warning "yamllint not available, skipping YAML linting tests"
         print_info "To enable YAML linting, install yamllint: pip3 install yamllint"

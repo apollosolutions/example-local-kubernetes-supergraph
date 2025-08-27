@@ -62,13 +62,13 @@ spec:
               port: 8088
             initialDelaySeconds: 5
             periodSeconds: 5
-        volumes:
-          - name: router-config
-            configMap:
-              name: router-config
-          - name: supergraph-schema
-            configMap:
-              name: supergraph-schema
+      volumes:
+        - name: router-config
+          configMap:
+            name: router-config
+        - name: supergraph-schema
+          configMap:
+            name: supergraph-schema
 ---
 apiVersion: v1
 kind: Service

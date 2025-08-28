@@ -5,6 +5,7 @@ set -e
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/scripts/config.sh"
 
 # Function to show usage
 show_usage() {
@@ -32,8 +33,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-NAMESPACE="apollo-supergraph"
 
 show_script_header "Apollo Supergraph Kubernetes Testing" "Testing Apollo Supergraph deployment in minikube"
 
@@ -70,7 +69,7 @@ print_status "Testing subgraphs health..."
 
 # Start subgraphs port forwarding
 if start_subgraphs_port_forward; then
-    if curl -s http://localhost:4001/products/graphql > /dev/null; then
+    if curl -s "$(get_subgraphs_products_url)" > /dev/null; then
         print_success "Subgraphs are responding"
     else
         print_error "Subgraphs are not responding"
@@ -80,7 +79,7 @@ if start_subgraphs_port_forward; then
 
     # Test GraphQL query to subgraphs
     print_status "Testing GraphQL query to subgraphs..."
-    RESPONSE=$(curl -s -X POST http://localhost:4001/products/graphql \
+    RESPONSE=$(curl -s -X POST "$(get_subgraphs_products_url)" \
       -H "Content-Type: application/json" \
       -d '{"query":"{ searchProducts { id title price } }"}')
 
@@ -147,7 +146,7 @@ echo "  ✅ GraphQL queries to router work"
 
 echo ""
 echo "🌐 Your deployment is ready!"
-echo "  - Router: kubectl port-forward svc/apollo-router-service 4000:4000 -n $NAMESPACE"
-echo "  - Subgraphs: kubectl port-forward svc/subgraphs-service 4001:4001 -n $NAMESPACE"
+echo "  - Router: kubectl port-forward svc/$(get_router_service_name) $ROUTER_GRAPHQL_PORT:$ROUTER_GRAPHQL_PORT -n $NAMESPACE"
+echo "  - Subgraphs: kubectl port-forward svc/$(get_subgraphs_service_name) $SUBGRAPHS_PORT:$SUBGRAPHS_PORT -n $NAMESPACE"
 
 show_script_footer "Kubernetes Testing"

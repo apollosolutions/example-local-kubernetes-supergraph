@@ -86,27 +86,27 @@ Complete guide to set up and run the Apollo Supergraph locally and in Kubernetes
 |--------|---------|-------|-------------|
 | `./test-k8s.sh` | **Deployment validation** | Full deployment (subgraphs + router) | After `./run-k8s.sh` |
 | `./test-router.sh` | **Router testing** | Router only | When router is running |
-| `./k8s-status.sh` | **Kubernetes status** | K8s resources in minikube | Check deployment status |
+| `./status-k8s.sh` | **Kubernetes status** | K8s resources in minikube | Check deployment status |
 
 ### Kubernetes Status Monitoring
 
-The `k8s-status.sh` script provides comprehensive status information about your Kubernetes deployment:
+The `status-k8s.sh` script provides comprehensive status information about your Kubernetes deployment:
 
 ```bash
 # Show basic status
-./k8s-status.sh
+./status-k8s.sh
 
 # Show detailed information
-./k8s-status.sh --detailed
+./status-k8s.sh --detailed
 
 # Show only pod status
-./k8s-status.sh --pods
+./status-k8s.sh --pods
 
 # Show only service status
-./k8s-status.sh --services
+./status-k8s.sh --services
 
 # Show only ingress status
-./k8s-status.sh --ingress
+./status-k8s.sh --ingress
 ```
 
 **What it shows:**
@@ -200,16 +200,13 @@ After deployment, the Apollo Router is accessible at:
 - **GraphQL Endpoint**: http://localhost:4000/graphql
 - **Health Check**: http://localhost:4000/health
 
-For Ingress access:
+For direct access to subgraphs:
 ```bash
-# Get minikube IP
-minikube ip
-
-# Add to /etc/hosts (replace <minikube-ip> with actual IP)
-echo "$(minikube ip) apollo-router.local" | sudo tee -a /etc/hosts
+# Port forward subgraphs service
+kubectl port-forward svc/subgraphs-service 4001:4001 -n apollo-supergraph
 ```
 
-Then access: http://apollo-router.local
+Then access: http://localhost:4001
 
 </details>
 

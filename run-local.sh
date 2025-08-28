@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Source shared utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/scripts/config.sh"
+
 # =============================================================================
 # Apollo Supergraph - Local Development Script (No Kubernetes)
 # =============================================================================
@@ -143,9 +148,9 @@ if [ "$RUN_SUBGRAPHS" = true ]; then
     
     # Test if subgraphs are responding
     for i in {1..15}; do
-        if curl -s http://localhost:4001/products/graphql > /dev/null 2>&1 && \
-           curl -s http://localhost:4001/reviews/graphql > /dev/null 2>&1 && \
-           curl -s http://localhost:4001/users/graphql > /dev/null 2>&1; then
+        if curl -s "$(get_subgraphs_products_url)" > /dev/null 2>&1 && \
+           curl -s "$(get_subgraphs_reviews_url)" > /dev/null 2>&1 && \
+           curl -s "$(get_subgraphs_users_url)" > /dev/null 2>&1; then
             print_success "Subgraphs are ready!"
             break
         fi
@@ -170,8 +175,8 @@ if [ "$RUN_ROUTER" = true ]; then
     # Check if subgraphs are running when using router-only mode
     if [ "$RUN_SUBGRAPHS" = false ]; then
         print_status "Checking if subgraphs are running..."
-        if ! curl -s http://localhost:4001/products/graphql > /dev/null 2>&1; then
-            print_error "Subgraphs are not running on localhost:4001"
+        if ! curl -s "$(get_subgraphs_products_url)" > /dev/null 2>&1; then
+            print_error "Subgraphs are not running on $(get_subgraphs_url)"
             print_error "Please start the subgraphs first:"
             print_error "  ./run-local.sh --subgraphs-only"
             print_error "  or"
@@ -193,7 +198,7 @@ if [ "$RUN_ROUTER" = true ]; then
     
     # Test if router is responding
     for i in {1..10}; do
-        if curl -s http://localhost:8088/health > /dev/null 2>&1; then
+        if curl -s "$(get_router_health_url)" > /dev/null 2>&1; then
             print_success "Apollo Router is ready!"
             break
         fi
@@ -212,20 +217,20 @@ echo ""
 echo "📋 Service Status:"
 
 if [ "$RUN_SUBGRAPHS" = true ]; then
-    echo "  ✅ Subgraphs: http://localhost:4001"
-    echo "    - Products: http://localhost:4001/products/graphql"
-    echo "    - Reviews: http://localhost:4001/reviews/graphql"
-    echo "    - Users: http://localhost:4001/users/graphql"
+    echo "  ✅ Subgraphs: $(get_subgraphs_url)"
+    echo "    - Products: $(get_subgraphs_products_url)"
+    echo "    - Reviews: $(get_subgraphs_reviews_url)"
+    echo "    - Users: $(get_subgraphs_users_url)"
 fi
 
 if [ "$RUN_ROUTER" = true ]; then
-    echo "  ✅ Apollo Router: http://localhost:4000/graphql"
-    echo "  ✅ Router Health: http://localhost:8088/health"
+    echo "  ✅ Apollo Router: $(get_router_graphql_url)"
+    echo "  ✅ Router Health: $(get_router_health_url)"
 fi
 
 echo ""
 echo "🧪 Test the GraphQL API:"
-echo "  curl -X POST http://localhost:4000/graphql \\"
+echo "  curl -X POST $(get_router_graphql_url) \\"
 echo "    -H \"Content-Type: application/json\" \\"
 echo "    -d '{\"query\":\"{ searchProducts { id title price } }\"}'"
 echo ""

@@ -4,20 +4,18 @@
 # Apollo Supergraph - Port Forwarding Utilities
 # =============================================================================
 #
-# This script provides centralized port forwarding management for the Apollo
-# Supergraph deployment. It handles starting, stopping, and checking port
-# forwarding for both the router and subgraphs.
+# This script manages port forwarding for the Apollo Router and subgraphs
+# in Kubernetes deployments.
 #
 # =============================================================================
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/config.sh"
 
-# Default values
-NAMESPACE="apollo-supergraph"
-ROUTER_PORT=4000
-SUBGRAPHS_PORT=4001
+# Configuration (now from config)
+NAMESPACE=$(get_k8s_namespace)
 PID_FILE_DIR="/tmp/apollo-supergraph"
 
 # Create PID file directory if it doesn't exist
@@ -153,9 +151,9 @@ wait_for_port_forward() {
 
 # Start router port forwarding
 start_router_port_forward() {
-    start_port_forward "apollo-router" "$ROUTER_PORT"
+    start_port_forward "apollo-router" "$ROUTER_GRAPHQL_PORT"
     if [ $? -eq 0 ]; then
-        wait_for_port_forward "apollo-router" "$ROUTER_PORT"
+        wait_for_port_forward "apollo-router" "$ROUTER_GRAPHQL_PORT"
     fi
 }
 
@@ -183,7 +181,7 @@ show_port_forward_status() {
     # Check router
     if is_port_forward_running "apollo-router"; then
         local pid=$(cat $(get_pid_file "apollo-router"))
-        print_success "Router: Running (PID: $pid) - http://localhost:$ROUTER_PORT"
+        print_success "Router: Running (PID: $pid) - http://localhost:$ROUTER_GRAPHQL_PORT"
     else
         print_error "Router: Not running"
     fi

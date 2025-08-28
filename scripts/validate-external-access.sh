@@ -1,10 +1,18 @@
 #!/bin/bash
 
-set -e
+# =============================================================================
+# Apollo Supergraph - External Access Validation
+# =============================================================================
+#
+# This script validates that the Apollo Supergraph is accessible from external
+# sources (outside of Kubernetes cluster).
+#
+# =============================================================================
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/config.sh"
 
 show_script_header "External Access Validation" "Validating external access to subgraphs deployment"
 
@@ -41,7 +49,7 @@ PF_PID=$!
 sleep 5
 
 # Test health endpoint
-if curl -s http://localhost:4001/health > /dev/null; then
+if curl -s "$(get_subgraphs_url)/health" > /dev/null; then
     print_success "Health endpoint accessible via port-forward"
 else
     print_error "Health endpoint not accessible via port-forward"
@@ -53,7 +61,7 @@ fi
 print_status "Testing GraphQL endpoints via port-forward..."
 
 # Test products
-if curl -s -X POST http://localhost:4001/products/graphql \
+if curl -s -X POST "$(get_subgraphs_products_url)" \
   -H "Content-Type: application/json" \
   -d '{"query":"{ searchProducts { id title } }"}' | grep -q "data"; then
     print_success "Products subgraph working via port-forward"
@@ -64,7 +72,7 @@ else
 fi
 
 # Test users
-if curl -s -X POST http://localhost:4001/users/graphql \
+if curl -s -X POST "$(get_subgraphs_users_url)" \
   -H "Content-Type: application/json" \
   -d '{"query":"{ allUsers { id } }"}' | grep -q "data"; then
     print_success "Users subgraph working via port-forward"
@@ -98,11 +106,11 @@ echo ""
 echo "📋 Access Methods:"
 echo ""
 echo "🔧 Method 1: Port Forwarding (Recommended for development)"
-echo "  kubectl port-forward svc/subgraphs-service 4001:4001 -n subgraphs-only"
+echo "  kubectl port-forward svc/subgraphs-service $SUBGRAPHS_PORT:$SUBGRAPHS_PORT -n subgraphs-only"
 echo "  Then access:"
-echo "    - Health: http://localhost:4001/health"
-echo "    - Products: http://localhost:4001/products/graphql"
-echo "    - Users: http://localhost:4001/users/graphql"
+echo "    - Health: $(get_subgraphs_url)/health"
+echo "    - Products: $(get_subgraphs_products_url)"
+echo "    - Users: $(get_subgraphs_users_url)"
 echo ""
 echo "🌐 Method 2: Minikube Service (For browser access)"
 echo "  minikube service subgraphs-service -n subgraphs-only"
@@ -110,14 +118,14 @@ echo "  This will open your browser to the service"
 echo ""
 echo "🧪 Test Commands:"
 echo "  # Health check"
-echo "  curl http://localhost:4001/health"
+echo "  curl $(get_subgraphs_url)/health"
 echo ""
 echo "  # Products query"
-echo "  curl -X POST http://localhost:4001/products/graphql \\"
+echo "  curl -X POST $(get_subgraphs_products_url) \\"
 echo "    -H \"Content-Type: application/json\" \\"
 echo "    -d '{\"query\":\"{ searchProducts { id title price } }\"}'"
 echo ""
 echo "  # Users query"
-echo "  curl -X POST http://localhost:4001/users/graphql \\"
+echo "  curl -X POST $(get_subgraphs_users_url) \\"
 echo "    -H \"Content-Type: application/json\" \\"
 echo "    -d '{\"query\":\"{ allUsers { id } }\"}'"

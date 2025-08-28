@@ -174,3 +174,44 @@ show_script_footer() {
     echo "$script_name completed successfully!"
     echo "============================================================================="
 }
+
+# Cross-platform timeout function
+run_with_timeout() {
+    local timeout_seconds=$1
+    shift
+    local cmd=("$@")
+    
+    # Check if timeout command is available (Linux)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "${timeout_seconds}s" "${cmd[@]}" 2>/dev/null
+        return $?
+    fi
+    
+    # macOS fallback using background process and kill
+    local pid
+    # Suppress job control messages
+    set +m
+    "${cmd[@]}" 2>/dev/null &
+    pid=$!
+    
+    # Wait for the specified timeout
+    local elapsed=0
+    while [ $elapsed -lt $timeout_seconds ]; do
+        if ! kill -0 $pid 2>/dev/null; then
+            # Process completed
+            wait $pid 2>/dev/null
+            set -m
+            return $?
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    
+    # Timeout reached, kill the process
+    kill -TERM $pid 2>/dev/null
+    sleep 1
+    kill -KILL $pid 2>/dev/null 2>/dev/null
+    wait $pid 2>/dev/null
+    set -m
+    return 124  # Exit code for timeout
+}

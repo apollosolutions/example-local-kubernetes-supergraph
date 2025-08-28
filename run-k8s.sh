@@ -5,6 +5,7 @@ set -e
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/scripts/config.sh"
 
 # Function to show usage
 show_usage() {
@@ -22,7 +23,7 @@ show_usage() {
 }
 
 # Default values
-NAMESPACE="apollo-supergraph"
+NAMESPACE=$(get_k8s_namespace)
 SERVICE_TYPE="ClusterIP"
 REPLICAS=2
 PORT_FORWARD_PID=""
@@ -145,7 +146,7 @@ cd router
 # Generate supergraph with localhost URLs first
 ./compose.sh
 # Create a temporary copy with Kubernetes URLs
-sed 's|http://localhost:4001|http://subgraphs-service.apollo-supergraph.svc.cluster.local:4001|g' supergraph.graphql > supergraph-k8s.graphql
+sed "s|http://localhost:$SUBGRAPHS_PORT|http://$(get_subgraphs_service_name).$(get_k8s_namespace).svc.cluster.local:$SUBGRAPHS_PORT|g" supergraph.graphql > supergraph-k8s.graphql
 cd ..
 
 # Create supergraph-schema ConfigMap from the Kubernetes version
@@ -187,6 +188,10 @@ print_status "Starting port forwarding for Apollo Router..."
 print_status "Running: ./scripts/port-forward-utils.sh"
 source ./scripts/port-forward-utils.sh && start_router_port_forward
 
+# Start port forwarding for subgraphs
+print_status "Starting port forwarding for subgraphs..."
+source ./scripts/port-forward-utils.sh && start_subgraphs_port_forward
+
 # Wait a moment for port forward to establish
 sleep 3
 
@@ -197,7 +202,7 @@ source "./scripts/test-utils.sh"
 if test_router_health > /dev/null 2>&1; then
     print_success "Port forwarding established successfully!"
 else
-    print_warning "Port forwarding may still be establishing. Please wait a moment and try accessing http://localhost:4000"
+    print_warning "Port forwarding may still be establishing. Please wait a moment and try accessing $(get_router_graphql_url)"
 fi
 
 print_success "Deployment completed successfully!"
@@ -210,12 +215,9 @@ echo "  - Apollo Router: ${ROUTER_REPLICAS} replica(s)"
 
 echo ""
 echo "🌐 Access your applications:"
-echo "  - Apollo Router: http://localhost:4000 (port forwarding active)"
-echo "  - Apollo Router: http://apollo-router.local (add to /etc/hosts: $MINIKUBE_IP apollo-router.local)"
-echo "  - Router Health: http://localhost:4000/health"
-echo ""
-print_warning "Don't forget to add the following line to your /etc/hosts file:"
-echo "  $MINIKUBE_IP apollo-router.local"
+echo "  - Apollo Router: $(get_router_graphql_url) (port forwarding active)"
+echo "  - Router Health: $(get_router_health_url)"
+echo "  - Subgraphs: $(get_subgraphs_url) (port forwarding active)"
 
 echo ""
 echo "🔍 Useful commands:"
@@ -223,10 +225,9 @@ echo "  - View pods: kubectl get pods -n $NAMESPACE"
 echo "  - View services: kubectl get svc -n $NAMESPACE"
 echo "  - View router logs: kubectl logs -f deployment/apollo-router -n $NAMESPACE"
 echo "  - View subgraphs logs: kubectl logs -f deployment/subgraphs -n $NAMESPACE"
-echo "  - Port forward subgraphs: kubectl port-forward svc/subgraphs-service 4001:4001 -n $NAMESPACE"
 echo "  - Stop port forwarding: ./scripts/port-forward-utils.sh stop"
 echo "  - Restart port forwarding: ./scripts/port-forward-utils.sh start"
 echo "  - Test router: ./test-router.sh"
-echo "  - Check status: ./k8s-status.sh"
+echo "  - Check status: ./status-k8s.sh"
 
 show_script_footer "Apollo Supergraph Deployment"

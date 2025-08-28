@@ -12,11 +12,12 @@
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/config.sh"
 
-# Default values
-ROUTER_URL="http://localhost:4000"
-HEALTH_ENDPOINT="$ROUTER_URL/health"
-GRAPHQL_ENDPOINT="$ROUTER_URL/graphql"
+# Default values (now from config)
+ROUTER_URL=$(get_router_graphql_url | sed 's|/graphql$||')
+HEALTH_ENDPOINT=$(get_router_health_url)
+GRAPHQL_ENDPOINT=$(get_router_graphql_url)
 
 # Function to test if port forwarding is working
 test_port_forward() {
@@ -228,7 +229,7 @@ test_basic_infrastructure() {
     print_status "Testing router health..."
     
     # Test router health
-    if curl -s http://localhost:4000/health > /dev/null 2>&1; then
+    if curl -s "$(get_router_health_url)" > /dev/null 2>&1; then
         print_success "Router health check passed"
     else
         print_error "Router health check failed"

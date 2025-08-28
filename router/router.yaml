@@ -1,18 +1,29 @@
 # $schema: configuration_schema.json
 
+homepage:
+  enabled: false
+
 sandbox:
   enabled: true
 
 supergraph:
   introspection: true
-  listen: 0.0.0.0:${env.PORT:-4000}
+  listen: 0.0.0.0:4000
   path: /graphql
 
-homepage:
-  enabled: false
+cors:
+  allow_any_origin: true
 
 include_subgraph_errors:
   all: true
+
+subscription:
+  enabled: true
+  mode:
+    passthrough:
+      subgraphs:
+        reviews:
+          protocol: graphql_ws
 
 telemetry:
   instrumentation:

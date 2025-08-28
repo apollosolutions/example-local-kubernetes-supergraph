@@ -34,4 +34,10 @@ echo "🔍 Verify cleanup:"
 echo "  - View all namespaces: kubectl get namespaces"
 echo "  - View all pods: kubectl get pods --all-namespaces"
 
+echo ""
+print_warning "Note: Minikube is still running!"
+echo "  - Only the Apollo Supergraph pods and namespace were deleted"
+echo "  - To stop minikube completely, run: ./kill-minikube.sh"
+echo "  - To restart the deployment, run: ./run-k8s.sh"
+
 show_script_footer "Cleanup"

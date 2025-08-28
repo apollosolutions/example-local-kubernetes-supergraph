@@ -3,10 +3,9 @@ extend schema
 
 type Query {
   """
-  Get the current user from our fake "auth" headers
-  Set the "x-user-id" header to the user id.
+  Get a user by ID
   """
-  user: User
+  user(id: ID!): User
   allUsers: [User]
 }
 

@@ -25,6 +25,18 @@ show_usage() {
 NAMESPACE="apollo-supergraph"
 SERVICE_TYPE="ClusterIP"
 REPLICAS=2
+PORT_FORWARD_PID=""
+
+# Cleanup function to stop port forwarding
+cleanup() {
+    if [ -n "$PORT_FORWARD_PID" ] && kill -0 "$PORT_FORWARD_PID" 2>/dev/null; then
+        print_status "Stopping port forwarding (PID: $PORT_FORWARD_PID)..."
+        kill "$PORT_FORWARD_PID" 2>/dev/null || true
+    fi
+}
+
+# Set trap to cleanup on script exit
+trap cleanup EXIT
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -170,6 +182,24 @@ sleep 10
 # Get minikube IP
 MINIKUBE_IP=$(get_minikube_ip)
 
+# Start port forwarding automatically
+print_status "Starting port forwarding for Apollo Router..."
+print_status "Running: ./scripts/port-forward-utils.sh"
+source ./scripts/port-forward-utils.sh && start_router_port_forward
+
+# Wait a moment for port forward to establish
+sleep 3
+
+# Source test utilities for health check
+source "./scripts/test-utils.sh"
+
+# Check if port forward is working
+if test_router_health > /dev/null 2>&1; then
+    print_success "Port forwarding established successfully!"
+else
+    print_warning "Port forwarding may still be establishing. Please wait a moment and try accessing http://localhost:4000"
+fi
+
 print_success "Deployment completed successfully!"
 echo ""
 echo "📋 Deployment Summary:"
@@ -180,8 +210,9 @@ echo "  - Apollo Router: ${ROUTER_REPLICAS} replica(s)"
 
 echo ""
 echo "🌐 Access your applications:"
+echo "  - Apollo Router: http://localhost:4000 (port forwarding active)"
 echo "  - Apollo Router: http://apollo-router.local (add to /etc/hosts: $MINIKUBE_IP apollo-router.local)"
-echo "  - Router Health: http://$MINIKUBE_IP:$(kubectl get svc apollo-router-service -n $NAMESPACE -o jsonpath='{.spec.ports[?(@.name=="health")].nodePort}')"
+echo "  - Router Health: http://localhost:4000/health"
 echo ""
 print_warning "Don't forget to add the following line to your /etc/hosts file:"
 echo "  $MINIKUBE_IP apollo-router.local"
@@ -191,8 +222,11 @@ echo "🔍 Useful commands:"
 echo "  - View pods: kubectl get pods -n $NAMESPACE"
 echo "  - View services: kubectl get svc -n $NAMESPACE"
 echo "  - View router logs: kubectl logs -f deployment/apollo-router -n $NAMESPACE"
-echo "  - Port forward router: kubectl port-forward svc/apollo-router-service 4000:4000 -n $NAMESPACE"
 echo "  - View subgraphs logs: kubectl logs -f deployment/subgraphs -n $NAMESPACE"
 echo "  - Port forward subgraphs: kubectl port-forward svc/subgraphs-service 4001:4001 -n $NAMESPACE"
+echo "  - Stop port forwarding: ./scripts/port-forward-utils.sh stop"
+echo "  - Restart port forwarding: ./scripts/port-forward-utils.sh start"
+echo "  - Test router: ./test-router.sh"
+echo "  - Check status: ./k8s-status.sh"
 
 show_script_footer "Apollo Supergraph Deployment"

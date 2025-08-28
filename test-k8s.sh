@@ -62,32 +62,34 @@ fi
 print_status "Checking service status..."
 kubectl get svc -n $NAMESPACE
 
+# Source port forwarding utilities
+source "$SCRIPT_DIR/scripts/port-forward-utils.sh"
+
 # Test subgraphs
 print_status "Testing subgraphs health..."
 
-# Test via port-forward
-kubectl port-forward svc/subgraphs-service 4001:4001 -n $NAMESPACE &
-PF_PID=$!
+# Start subgraphs port forwarding
+if start_subgraphs_port_forward; then
+    if curl -s http://localhost:4001/products/graphql > /dev/null; then
+        print_success "Subgraphs are responding"
+    else
+        print_error "Subgraphs are not responding"
+        stop_port_forward "subgraphs"
+        exit 1
+    fi
 
-# Wait for port-forward to be ready
-sleep 5
+    # Test GraphQL query to subgraphs
+    print_status "Testing GraphQL query to subgraphs..."
+    RESPONSE=$(curl -s -X POST http://localhost:4001/products/graphql \
+      -H "Content-Type: application/json" \
+      -d '{"query":"{ searchProducts { id title price } }"}')
 
-if curl -s http://localhost:4001/products/graphql > /dev/null; then
-    print_success "Subgraphs are responding"
+    # Stop subgraphs port forwarding
+    stop_port_forward "subgraphs"
 else
-    print_error "Subgraphs are not responding"
-    kill $PF_PID 2>/dev/null || true
+    print_error "Failed to start subgraphs port forwarding"
     exit 1
 fi
-
-# Test GraphQL query to subgraphs
-print_status "Testing GraphQL query to subgraphs..."
-RESPONSE=$(curl -s -X POST http://localhost:4001/products/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ searchProducts { id title price } }"}')
-
-# Stop port-forward
-kill $PF_PID 2>/dev/null || true
 
 if echo "$RESPONSE" | grep -q "data"; then
     print_success "GraphQL query to subgraphs successful"
@@ -99,36 +101,36 @@ else
     exit 1
 fi
 
+# Source test utilities for router testing
+source "$SCRIPT_DIR/scripts/test-utils.sh"
+
 # Test router
 print_status "Testing router health..."
 
-# Wait for port-forward to be ready
-sleep 5
+# Start router port forwarding
+if start_router_port_forward; then
+    if test_router_health > /dev/null 2>&1; then
+        print_success "Router is responding"
+    else
+        print_error "Router is not responding"
+        stop_port_forward "apollo-router"
+        exit 1
+    fi
 
-if curl -s http://localhost:4000 > /dev/null; then
-    print_success "Router is responding"
+    # Test GraphQL query to router
+    print_status "Testing GraphQL query to router..."
+    if test_search_products > /dev/null 2>&1; then
+        print_success "GraphQL query to router successful"
+    else
+        print_error "GraphQL query to router failed"
+        stop_port_forward "apollo-router"
+        exit 1
+    fi
+    
+    # Stop router port forwarding
+    stop_port_forward "apollo-router"
 else
-    print_error "Router is not responding"
-    kill $PF_PID 2>/dev/null || true
-    exit 1
-fi
-
-# Test GraphQL query to router
-print_status "Testing GraphQL query to router..."
-RESPONSE=$(curl -s -X POST http://localhost:4000/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ searchProducts { id title price } }"}')
-
-# Stop port-forward
-kill $PF_PID 2>/dev/null || true
-
-if echo "$RESPONSE" | grep -q "data"; then
-    print_success "GraphQL query to router successful"
-    echo "Response: $RESPONSE" | head -c 200
-    echo "..."
-else
-    print_error "GraphQL query to router failed"
-    echo "Response: $RESPONSE"
+    print_error "Failed to start router port forwarding"
     exit 1
 fi
 

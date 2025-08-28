@@ -134,8 +134,274 @@ jobs:
           ./kill-minikube.sh --help || exit 1
           ./setup-minikube.sh --help || exit 1
           ./setup-env.sh --help || exit 1
+          ./test-router.sh --help || exit 1
 
           echo "✅ All script help options working"
+
+      - name: Test new test utilities
+        run: |
+          # Test that test utilities can be sourced without errors
+          echo "Testing test utilities..."
+          
+          # Source test utilities and test basic functions
+          source scripts/test-utils.sh
+          
+          # Test that functions are available
+          if ! type test_router_health > /dev/null 2>&1; then
+            echo "❌ test_router_health function not found"
+            exit 1
+          fi
+          
+          if ! type test_search_products > /dev/null 2>&1; then
+            echo "❌ test_search_products function not found"
+            exit 1
+          fi
+          
+          if ! type test_router_comprehensive > /dev/null 2>&1; then
+            echo "❌ test_router_comprehensive function not found"
+            exit 1
+          fi
+          
+          echo "✅ Test utilities functions available"
+          
+          # Test that test utilities can be run directly
+          echo "Testing test utilities execution..."
+          
+          # Test that the script can be run with --help (should show usage)
+          if ! bash scripts/test-utils.sh --help 2>&1 | grep -q "Available tests"; then
+            echo "❌ test-utils.sh --help not working correctly"
+            exit 1
+          fi
+          
+          echo "✅ Test utilities execution working"
+
+      - name: Test script organization
+        run: |
+          echo "🔍 Dynamically discovering scripts..."
+          
+          # Discover user-facing scripts in root directory
+          echo "📁 Checking user-facing scripts in root directory..."
+          user_scripts=($(find . -maxdepth 1 -name "*.sh" -type f -exec basename {} \; | grep -v "^\.$"))
+          
+          if [ ${#user_scripts[@]} -eq 0 ]; then
+            echo "❌ No user-facing scripts found in root directory"
+            exit 1
+          fi
+          
+          echo "✅ Found ${#user_scripts[@]} user-facing scripts:"
+          for script in "${user_scripts[@]}"; do
+            echo "  - $script"
+          done
+          
+          # Discover internal scripts in scripts directory
+          echo "📁 Checking internal scripts in scripts directory..."
+          if [ ! -d "scripts" ]; then
+            echo "❌ scripts directory not found"
+            exit 1
+          fi
+          
+          internal_scripts=($(find scripts -name "*.sh" -type f -exec basename {} \;))
+          
+          if [ ${#internal_scripts[@]} -eq 0 ]; then
+            echo "❌ No internal scripts found in scripts directory"
+            exit 1
+          fi
+          
+          echo "✅ Found ${#internal_scripts[@]} internal scripts:"
+          for script in "${internal_scripts[@]}"; do
+            echo "  - scripts/$script"
+          done
+          
+          echo "✅ Script organization is correct"
+          
+          # Test that scripts are using test utilities (no duplication)
+          echo "Testing for script duplication..."
+          
+          # Check all scripts for hardcoded curl commands that should use test utilities
+          echo "🔍 Checking for hardcoded curl commands in scripts..."
+          
+          # Check user-facing scripts
+          for script in "${user_scripts[@]}"; do
+            if grep -q "curl.*localhost:4000" "$script"; then
+              echo "❌ $script contains hardcoded curl commands for router testing"
+              echo "   Should use test utilities instead"
+              exit 1
+            fi
+          done
+          
+          # Check internal scripts (but allow some curl usage in test-utils.sh itself)
+          for script in "${internal_scripts[@]}"; do
+            if [ "$script" != "test-utils.sh" ] && grep -q "curl.*localhost:4000.*health" "scripts/$script"; then
+              echo "❌ scripts/$script contains hardcoded curl commands for health checks"
+              echo "   Should use test utilities instead"
+              exit 1
+            fi
+          done
+          
+          echo "✅ No duplication found - scripts using test utilities correctly"
+          
+          # Test that test utilities contain expected functions
+          echo "Testing test utilities content..."
+          
+          # Check that test-utils.sh exists
+          if [ ! -f "scripts/test-utils.sh" ]; then
+            echo "❌ test-utils.sh not found in scripts directory"
+            exit 1
+          fi
+          
+          # Discover test functions dynamically
+          echo "🔍 Discovering test functions in test-utils.sh..."
+          test_functions=($(grep -E "^test_[a-zA-Z_]+\(\)" scripts/test-utils.sh | sed 's/() {.*//' | sort))
+          
+          if [ ${#test_functions[@]} -eq 0 ]; then
+            echo "❌ No test functions found in test-utils.sh"
+            exit 1
+          fi
+          
+          echo "✅ Found ${#test_functions[@]} test functions:"
+          for func in "${test_functions[@]}"; do
+            echo "  - $func"
+          done
+          
+          # Check for essential test functions
+          essential_functions=("test_router_health" "test_search_products")
+          for func in "${essential_functions[@]}"; do
+            if [[ ! " ${test_functions[@]} " =~ " ${func} " ]]; then
+              echo "❌ Essential test function not found: $func"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Test utilities contain essential functions"
+          
+          # Test that test-router.sh works correctly
+          echo "Testing test-router.sh functionality..."
+          
+          # Check that test-router.sh exists
+          if [ ! -f "test-router.sh" ]; then
+            echo "❌ test-router.sh not found in root directory"
+            exit 1
+          fi
+          
+          # Test that it can show help
+          if ! ./test-router.sh --help 2>&1 | grep -q "Test Names:"; then
+            echo "❌ test-router.sh --help not working correctly"
+            exit 1
+          fi
+          
+          # Discover available tests dynamically
+          echo "🔍 Discovering available tests in test-router.sh..."
+          available_tests=($(./test-router.sh --help 2>&1 | grep -A 20 "Test Names:" | grep -E "^  [a-zA-Z-]+" | sed 's/^  //' | sed 's/ .*//' | tr '\n' ' '))
+          
+          if [ ${#available_tests[@]} -eq 0 ]; then
+            echo "❌ No tests found in test-router.sh help output"
+            exit 1
+          fi
+          
+          echo "✅ Found ${#available_tests[@]} available tests:"
+          for test in "${available_tests[@]}"; do
+            echo "  - $test"
+          done
+          
+          # Check for essential tests
+          essential_tests=("health" "products" "status" "all")
+          for test in "${essential_tests[@]}"; do
+            if [[ ! " ${available_tests[@]} " =~ " ${test} " ]]; then
+              echo "❌ Essential test not found: $test"
+              exit 1
+            fi
+          done
+          
+          echo "✅ test-router.sh functionality working correctly"
+          
+          # Test that build validation script exists and has help
+          echo "Testing build validation script..."
+          
+          # Check if build-validate.sh exists
+          if [ ! -f "scripts/build-validate.sh" ]; then
+            echo "❌ build-validate.sh not found in scripts directory"
+            exit 1
+          fi
+          
+          # Test that it has help functionality
+          if ! ./scripts/build-validate.sh --help 2>&1 | grep -q "Usage:"; then
+            echo "❌ build-validate.sh --help not working correctly"
+            exit 1
+          fi
+          
+          echo "✅ build-validate.sh exists and has help functionality"
+          
+          # Test all scripts that have --help functionality
+          echo "Testing script help functionality..."
+          echo "🔍 Checking which scripts support --help..."
+          
+          help_scripts=()
+          for script in "${user_scripts[@]}"; do
+            if ./"$script" --help 2>&1 | grep -q "Usage:\|Options:"; then
+              help_scripts+=("$script")
+            fi
+          done
+          
+          for script in "${internal_scripts[@]}"; do
+            if ./"scripts/$script" --help 2>&1 | grep -q "Usage:\|Options:"; then
+              help_scripts+=("scripts/$script")
+            fi
+          done
+          
+          if [ ${#help_scripts[@]} -gt 0 ]; then
+            echo "✅ Found ${#help_scripts[@]} scripts with help functionality:"
+            for script in "${help_scripts[@]}"; do
+              echo "  - $script"
+            done
+          else
+            echo "⚠️  No scripts found with help functionality"
+          fi
+          
+          # Test that documentation structure is correct
+          echo "Testing documentation structure..."
+          
+          # Check that README.md exists and points to SETUP.md
+          if ! grep -q "SETUP.md" README.md; then
+            echo "❌ README.md missing reference to SETUP.md"
+            exit 1
+          fi
+          
+          # Check that SETUP.md exists and contains commands
+          if [ ! -f "SETUP.md" ]; then
+            echo "❌ SETUP.md not found"
+            exit 1
+          fi
+          
+          # Check that ARCHITECTURE.md exists
+          if [ ! -f "ARCHITECTURE.md" ]; then
+            echo "❌ ARCHITECTURE.md not found"
+            exit 1
+          fi
+          
+          # Check that README-K8S.md is deleted
+          if [ -f "README-K8S.md" ]; then
+            echo "❌ README-K8S.md still exists (should be deleted)"
+            exit 1
+          fi
+          
+          echo "✅ Documentation structure is correct"
+          
+          # Test that cleanup-k8s.sh provides helpful output
+          echo "Testing cleanup-k8s.sh output..."
+          
+          # Test that it mentions minikube is still running
+          if ! ./cleanup-k8s.sh 2>&1 | grep -q "Minikube is still running"; then
+            echo "❌ cleanup-k8s.sh missing minikube warning"
+            exit 1
+          fi
+          
+          # Test that it mentions kill-minikube.sh
+          if ! ./cleanup-k8s.sh 2>&1 | grep -q "kill-minikube.sh"; then
+            echo "❌ cleanup-k8s.sh missing kill-minikube.sh reference"
+            exit 1
+          fi
+          
+          echo "✅ cleanup-k8s.sh provides helpful output"
 
   test-k8s-yaml:
     name: Test Kubernetes YAML Format

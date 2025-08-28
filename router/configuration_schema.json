@@ -1803,15 +1803,15 @@
           "default": {
             "supergraph": true,
             "query_planning": true,
-            "router": true,
-            "execution": true,
-            "http_request": true,
-            "request": true,
-            "parse_query": true,
-            "subgraph": true,
             "connect": true,
+            "router": true,
+            "connect_request": true,
+            "http_request": true,
+            "execution": true,
+            "request": true,
+            "subgraph": true,
             "subgraph_request": true,
-            "connect_request": true
+            "parse_query": true
           },
           "type": "object",
           "additionalProperties": {

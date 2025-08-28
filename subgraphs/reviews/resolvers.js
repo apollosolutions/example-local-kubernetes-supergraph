@@ -11,5 +11,18 @@ export const resolvers = {
   },
   Product: {
     reviews: (parent) => getReviewsByProductUpc(parent.upc)
-  }
+  },
+  Subscription: {
+    reviewAdded: {
+      subscribe: async function* () {
+        let count = 0;
+        while (true) {
+          const review = REVIEWS[count++];
+          yield { reviewAdded: review };
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          if (count === REVIEWS.length) count = 0;
+        }
+      },
+    },
+  },
 };

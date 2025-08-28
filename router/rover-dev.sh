@@ -6,4 +6,4 @@ source .env
 rover dev \
   --supergraph-config supergraph.yaml \
   --router-config router.yaml \
-  --accept-license
+  --elv2-license accept

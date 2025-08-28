@@ -2,34 +2,14 @@
 
 set -e
 
-echo "🔍 Validating external access to subgraphs deployment..."
+# Source shared utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+show_script_header "External Access Validation" "Validating external access to subgraphs deployment"
 
 # Check if namespace exists
-if ! kubectl get namespace subgraphs-only > /dev/null 2>&1; then
+if ! namespace_exists "subgraphs-only"; then
     print_error "Namespace subgraphs-only does not exist. Please deploy first:"
     echo "  ./deploy-subgraphs-only.sh"
     exit 1

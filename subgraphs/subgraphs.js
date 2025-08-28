@@ -6,6 +6,8 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import { WebSocketServer } from "ws";
+import { useServer } from "graphql-ws/use/ws";
 import { getProductsSchema } from './products/subgraph.js';
 import { getReviewsSchema } from './reviews/subgraph.js';
 import { getUsersSchema } from './users/subgraph.js';
@@ -19,6 +21,7 @@ export const LOCAL_SUBGRAPH_CONFIG = [
   {
     name: 'reviews',
     getSchema: getReviewsSchema,
+    subscriptions: true
   },
   {
     name: 'users',
@@ -54,6 +57,30 @@ export const startSubgraphs = async (httpPort) => {
       schema = subgraphConfig.getSchema();
     }
 
+    const path = `/${subgraphConfig.name}/graphql`;
+
+    let wsPlugin = {};
+    if (subgraphConfig.subscriptions === true) {
+      // Create WebSocket server for this subgraph
+      const wsServer = new WebSocketServer({
+        server: httpServer,
+        path,
+      });
+      const serverCleanup = useServer({ schema }, wsServer);
+      wsPlugin = {
+        async serverWillStart() {
+          return {
+            async drainServer() {
+              await serverCleanup.dispose();
+            },
+          };
+        },
+      };
+      console.log(`Setting up WebSocket server for [${subgraphConfig.name}] subgraph at ws://localhost:${serverPort}/${path}`);
+    }
+
+    console.log(`Setting up HTTP server for [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`);
+
     const server = new ApolloServer({
       schema,
       // For a real subgraph introspection should remain off, but for demo we enabled
@@ -62,13 +89,13 @@ export const startSubgraphs = async (httpPort) => {
       csrfPrevention: false,
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
-        ApolloServerPluginUsageReportingDisabled()
+        ApolloServerPluginUsageReportingDisabled(),
+        wsPlugin
       ]
     });
 
     await server.start();
 
-    const path = `/${subgraphConfig.name}/graphql`;
     app.use(
       path,
       cors(),
@@ -79,8 +106,6 @@ export const startSubgraphs = async (httpPort) => {
         }
       })
     );
-
-    console.log(`Setting up [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`);
   }
 
   // Start entire monolith at given port

@@ -142,21 +142,45 @@ if [ "$RUN_SUBGRAPHS" = true ]; then
     sleep 5
     
     # Test if subgraphs are responding
-    for i in {1..10}; do
-        if curl -s http://localhost:4001/products/graphql > /dev/null 2>&1; then
+    for i in {1..15}; do
+        if curl -s http://localhost:4001/products/graphql > /dev/null 2>&1 && \
+           curl -s http://localhost:4001/reviews/graphql > /dev/null 2>&1 && \
+           curl -s http://localhost:4001/users/graphql > /dev/null 2>&1; then
             print_success "Subgraphs are ready!"
             break
         fi
-        if [ $i -eq 10 ]; then
+        if [ $i -eq 15 ]; then
             print_error "Subgraphs failed to start properly"
             exit 1
         fi
-        sleep 2
+        print_status "Waiting for subgraphs... (attempt $i/15)"
+        sleep 3
     done
+    
+    # Regenerate supergraph schema after subgraphs are ready
+    print_status "Regenerating supergraph schema..."
+    cd router
+    ./compose.sh
+    cd ..
+    print_success "Supergraph schema regenerated"
 fi
 
 # Run router if requested
 if [ "$RUN_ROUTER" = true ]; then
+    # Check if subgraphs are running when using router-only mode
+    if [ "$RUN_SUBGRAPHS" = false ]; then
+        print_status "Checking if subgraphs are running..."
+        if ! curl -s http://localhost:4001/products/graphql > /dev/null 2>&1; then
+            print_error "Subgraphs are not running on localhost:4001"
+            print_error "Please start the subgraphs first:"
+            print_error "  ./run-local.sh --subgraphs-only"
+            print_error "  or"
+            print_error "  ./run-local.sh"
+            exit 1
+        fi
+        print_success "Subgraphs are running"
+    fi
+    
     print_status "Starting Apollo Router..."
     cd router
     ./rover-dev.sh &
@@ -175,8 +199,10 @@ if [ "$RUN_ROUTER" = true ]; then
         fi
         if [ $i -eq 10 ]; then
             print_error "Apollo Router failed to start properly"
+            print_error "Check router logs for more details"
             exit 1
         fi
+        print_status "Waiting for router... (attempt $i/10)"
         sleep 2
     done
 fi
@@ -201,7 +227,7 @@ echo ""
 echo "🧪 Test the GraphQL API:"
 echo "  curl -X POST http://localhost:4000/graphql \\"
 echo "    -H \"Content-Type: application/json\" \\"
-echo "    -d '{\"query\":\"{ products { id title price } }\"}'"
+echo "    -d '{\"query\":\"{ searchProducts { id title price } }\"}'"
 echo ""
 echo "🔍 Useful commands:"
 echo "  - View subgraphs logs: tail -f subgraphs/logs/*"

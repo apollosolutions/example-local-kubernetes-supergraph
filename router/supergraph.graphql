@@ -3,6 +3,7 @@ schema
   @link(url: "https://specs.apollo.dev/join/v0.5", for: EXECUTION)
 {
   query: Query
+  subscription: Subscription
 }
 
 directive @join__directive(graphs: [join__Graph!], name: String!, args: join__DirectiveArguments) repeatable on SCHEMA | OBJECT | INTERFACE | FIELD_DEFINITION
@@ -108,11 +109,8 @@ type Query
   """
   product(id: ID!): Product @join__field(graph: PRODUCTS)
 
-  """
-  Get the current user from our fake "auth" headers
-  Set the "x-user-id" header to the user id.
-  """
-  user: User @join__field(graph: USERS)
+  """Get a user by ID"""
+  user(id: ID!): User @join__field(graph: USERS)
   allUsers: [User] @join__field(graph: USERS)
 }
 
@@ -130,6 +128,12 @@ type Review
 
   """The product which this review is about"""
   product: Product
+}
+
+type Subscription
+  @join__type(graph: REVIEWS)
+{
+  reviewAdded: Review
 }
 
 """An user account in our system"""

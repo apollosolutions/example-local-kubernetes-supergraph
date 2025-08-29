@@ -2,108 +2,42 @@
 
 A complete example of deploying an Apollo Supergraph (Router + Subgraphs) for both local development and Kubernetes deployment.
 
-## 🚀 Quick Start
+## 🚀 What is this?
 
-### Option 1: Local Development (Recommended for Development)
+This project demonstrates how to set up and deploy an Apollo Supergraph with:
 
-Run the Apollo Supergraph locally without Kubernetes:
+- **Apollo Router** - GraphQL gateway that routes requests to subgraphs
+- **Subgraphs** - Three GraphQL services (Products, Reviews, Users) in a monolithic Node.js application
+- **Multiple deployment options** - Local development and Kubernetes deployment
 
-```bash
-# Run both subgraphs and router
-./run-local.sh
+## 🎯 Quick Start
 
+**📖 [SETUP.md](SETUP.md) contains the complete guide to get this running.**
 
-# Show help
-./run-local.sh --help
-```
+The setup guide includes:
+- ✅ Prerequisites and installation
+- ✅ Local development setup
+- ✅ Kubernetes deployment
+- ✅ Testing and validation
+- ✅ Troubleshooting
 
-**Benefits of local development:**
-- ✅ **Faster startup** - No Kubernetes overhead
-- ✅ **Easier debugging** - Direct access to logs
-- ✅ **No resource constraints** - Runs directly on your machine
-- ✅ **Simple cleanup** - Just Ctrl+C to stop
+## 🏗️ Architecture
 
-### Option 2: Kubernetes Deployment (Recommended for Testing Production-like Environment)
-
-#### Setup minikube
-
-```bash
-# Setup minikube with required addons
-./setup-minikube.sh
-```
-
-#### Deploy the applications
-
-```bash
-# Deploy Apollo Supergraph with 2 replicas (default)
-./run-k8s.sh
-
-# Deploy with custom number of replicas
-./run-k8s.sh --replicas 3
-
-# Show help
-./run-k8s.sh --help
-```
-
-## 📋 Prerequisites
-
-- [Node.js](https://nodejs.org/) (for subgraphs)
-- [Docker](https://docs.docker.com/get-docker/) (for Kubernetes deployment)
-- [minikube](https://minikube.sigs.k8s.io/docs/start/) (for Kubernetes deployment)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) (for Kubernetes deployment)
-
-## 🔧 Configuration
-
-Set up your Apollo Studio environment:
-
-```bash
-# Set up Apollo Studio credentials (safe - won't overwrite existing)
-./setup-env.sh
-```
-
-## 🧪 Testing
-
-### Local Testing
-
-```bash
-# Run all local tests
-./test-local.sh
-
-# Test specific components
-./test-local.sh --subgraphs     # Test subgraphs only
-./test-local.sh --composition   # Test supergraph composition only
-./test-local.sh --docker        # Test Docker builds only
-./test-local.sh --router        # Test router only
-```
-
-### Kubernetes Testing
-
-```bash
-# Test Apollo Supergraph deployment
-./test-k8s.sh
-```
-
-## 🧹 Cleanup
+This project supports two deployment modes:
 
 ### Local Development
-```bash
-# Stop all services
-Ctrl+C (in the terminal running run-local.sh)
-```
+- Subgraphs run as Node.js processes
+- Router runs in Docker
+- Direct localhost access
+- Fast development cycle
 
 ### Kubernetes Deployment
-```bash
-# Clean up deployment
-./cleanup-k8s.sh
+- Subgraphs run in Kubernetes pods
+- Router runs in Kubernetes pods
+- Production-like environment
+- Scalable and resilient
 
-# Stop and delete minikube cluster
-./kill-minikube.sh
-```
-
-## 📚 Documentation
-
-- **[SETUP.md](SETUP.md)** - Detailed setup and configuration instructions
-- **[README-K8S.md](README-K8S.md)** - Kubernetes-specific deployment details
+**📋 [ARCHITECTURE.md](ARCHITECTURE.md) explains the technical details and differences.**
 
 ## 🔗 Links
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # =============================================================================
-# Apollo Supergraph - Local Test Script
+# Apollo Supergraph - Build Validation Script
 # =============================================================================
 #
-# This script runs local tests to verify the Apollo Supergraph setup
-# without requiring minikube or Kubernetes.
+# This script validates the build process and components of the Apollo Supergraph
+# without requiring minikube or Kubernetes. It's used for development validation.
 #
 # =============================================================================
 
@@ -13,9 +13,9 @@ set -e
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/utils.sh"
 
-show_script_header "Local Testing" "Testing Apollo Supergraph components locally"
+show_script_header "Build Validation" "Validating Apollo Supergraph build components"
 
 # Function to show usage
 show_usage() {
@@ -339,17 +339,17 @@ if [ "$TEST_ROUTER" = true ]; then
     # Wait for router to start
     sleep 15
     
+    # Source test utilities for router testing
+    source "$SCRIPT_DIR/test-utils.sh"
+    
     # Test router endpoint
-    curl -X POST http://localhost:4000/graphql \
-      -H "Content-Type: application/json" \
-      -d '{"query":"{ searchProducts { id title price } }"}' \
-      --max-time 10 \
-      --retry 3 \
-      --retry-delay 2 > /dev/null || {
+    if test_search_products > /dev/null 2>&1; then
+        print_success "Router endpoint test passed"
+    else
         print_error "Router endpoint test failed"
         docker logs router-test
         exit 1
-    }
+    fi
     
     cd ..
     print_success "Router test passed"
@@ -379,4 +379,4 @@ if [ "$TEST_ROUTER" = true ]; then
     echo "  ✅ Router and subgraphs functionality"
 fi
 
-show_script_footer "Local Testing"
+show_script_footer "Build Validation"

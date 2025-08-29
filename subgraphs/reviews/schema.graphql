@@ -23,3 +23,7 @@ type Product @key(fields: "id") {
 type User @key(fields: "id", resolvable: false) {
   id: ID!
 }
+
+type Subscription {
+  reviewAdded: Review
+}

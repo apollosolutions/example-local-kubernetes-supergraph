@@ -5,6 +5,7 @@ set -e
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/scripts/config.sh"
 
 show_script_header "Cleanup" "Cleaning up Apollo Supergraph from minikube"
 
@@ -23,15 +24,21 @@ cleanup_namespace() {
 }
 
 # Clean up the main namespace
-cleanup_namespace "apollo-supergraph" "Apollo Supergraph"
+cleanup_namespace "$(get_k8s_namespace)" "Apollo Supergraph"
 
 print_success "Cleanup completed successfully!"
 echo ""
 echo "📋 Cleanup Summary:"
-echo "  - Cleaned namespace: apollo-supergraph"
+echo "  - Cleaned namespace: $(get_k8s_namespace)"
 echo ""
 echo "🔍 Verify cleanup:"
 echo "  - View all namespaces: kubectl get namespaces"
 echo "  - View all pods: kubectl get pods --all-namespaces"
+
+echo ""
+print_warning "Note: Minikube is still running!"
+echo "  - Only the Apollo Supergraph pods and namespace were deleted"
+echo "  - To stop minikube completely, run: ./kill-minikube.sh"
+echo "  - To restart the deployment, run: ./run-k8s.sh"
 
 show_script_footer "Cleanup"

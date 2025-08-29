@@ -6,6 +6,45 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/scripts/utils.sh"
 
+# Help function
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Setup minikube for Apollo Supergraph deployment.
+
+OPTIONS:
+    -h, --help    Show this help message and exit
+
+EXAMPLES:
+    $0              # Setup minikube with default settings
+    $0 --help       # Show this help message
+
+DESCRIPTION:
+    This script sets up a minikube cluster with:
+    - 4GB memory, 2 CPUs, 20GB disk
+    - Ingress controller enabled
+    - Metrics server enabled
+    
+    After setup, you can run ./run-k8s.sh to deploy the supergraph.
+
+EOF
+    exit 0
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            ;;
+    esac
+done
+
 show_script_header "Minikube Setup" "Setting up minikube for Apollo Supergraph deployment"
 
 # Validate required tools
@@ -49,7 +88,7 @@ echo "  - Ingress controller enabled"
 echo "  - Metrics server enabled"
 echo ""
 echo "🚀 You can now run the deployment:"
-echo "  ./deploy.sh"
+echo "  ./run-k8s.sh"
 echo ""
 echo "🔍 Useful commands:"
 echo "  - Open minikube dashboard: minikube dashboard"

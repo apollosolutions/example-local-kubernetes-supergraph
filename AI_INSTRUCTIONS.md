@@ -103,7 +103,7 @@ fi
 3. **Transform URLs during deployment** (sed replacement to Kubernetes service URLs)
 4. **Never commit Kubernetes URLs** to the supergraph.graphql file
 
-### Example of Correct URL Transformation in deploy.sh
+### Example of Correct URL Transformation in run-k8s.sh
 
 ```bash
 # Generate supergraph with localhost URLs first
@@ -138,7 +138,7 @@ sed 's|http://localhost:4001|http://subgraphs-service.apollo-supergraph.svc.clus
    - Faster startup, easier debugging
    - No container overhead
 
-2. **Kubernetes Deployment** (`deploy.sh`):
+2. **Kubernetes Deployment** (`run-k8s.sh`):
    - Runs WITH minikube Kubernetes
    - Everything containerized
    - Production-like environment
@@ -153,7 +153,7 @@ sed 's|http://localhost:4001|http://subgraphs-service.apollo-supergraph.svc.clus
 **Each script has a specific purpose - don't confuse them:**
 
 - `run-local.sh` - Local development WITHOUT Kubernetes
-- `deploy.sh` - Kubernetes deployment WITH minikube
+- `run-k8s.sh` - Kubernetes deployment WITH minikube
 - `setup-minikube.sh` - Setup minikube cluster
 - `kill-minikube.sh` - Stop and delete minikube cluster
 - `cleanup-k8s.sh` - Clean up Kubernetes resources
@@ -178,7 +178,7 @@ sed 's|http://localhost:4001|http://subgraphs-service.apollo-supergraph.svc.clus
 ### Recommended Development Process
 
 1. **Start with local development** (`run-local.sh`) for faster iteration
-2. **Use Kubernetes deployment** (`deploy.sh`) for testing production-like environments
+2. **Use Kubernetes deployment** (`run-k8s.sh`) for testing production-like environments
 3. **Keep configurations in router folder** as source of truth
 4. **Generate supergraph** with `./compose.sh` before deployments
 5. **Transform URLs** during deployment (localhost → Kubernetes service URLs)

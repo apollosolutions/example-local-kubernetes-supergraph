@@ -41,6 +41,6 @@ This project supports two deployment modes:
 
 ## 🔗 Links
 
-- [GraphOS Enterprise]: https://www.apollographql.com/docs/graphos/enterprise
-- [Rover]: https://www.apollographql.com/docs/rover/commands/dev
-- [minikube]: https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew
+- [GraphOS Enterprise](https://www.apollographql.com/docs/graphos/enterprise)
+- [Rover](https://www.apollographql.com/docs/rover/commands/dev)
+- [minikube](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)

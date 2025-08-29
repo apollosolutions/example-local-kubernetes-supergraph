@@ -1,21 +1,15 @@
 #!/bin/bash
 
 # Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/scripts/utils.sh" ]; then
-    source "$SCRIPT_DIR/scripts/utils.sh"
+if [ -z "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
 else
-    # Fallback if utils.sh not found
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[1;33m'
-    BLUE='\033[0;34m'
-    NC='\033[0m'
-    
-    print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
-    print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-    print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-    print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+    source "$SCRIPT_DIR/scripts/utils.sh"
 fi
 
 # Function to show usage

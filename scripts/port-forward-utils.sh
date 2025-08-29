@@ -13,8 +13,15 @@
 if [ -z "$SCRIPT_DIR" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
-source "$SCRIPT_DIR/scripts/utils.sh"
-source "$SCRIPT_DIR/scripts/config.sh"
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
+    source "$SCRIPT_DIR/config.sh"
+else
+    source "$SCRIPT_DIR/scripts/utils.sh"
+    source "$SCRIPT_DIR/scripts/config.sh"
+fi
 
 # Configuration (now from config)
 NAMESPACE=$(get_k8s_namespace)
@@ -153,9 +160,56 @@ wait_for_port_forward() {
 
 # Start router port forwarding
 start_router_port_forward() {
-    start_port_forward "apollo-router" "$ROUTER_GRAPHQL_PORT"
-    if [ $? -eq 0 ]; then
+    # Use a single port-forward command to forward both GraphQL and health ports
+    local pid_file=$(get_pid_file "apollo-router")
+    
+    # Check if already running
+    if is_port_forward_running "apollo-router"; then
+        local pid=$(cat "$pid_file")
+        print_warning "Port forwarding for apollo-router is already running (PID: $pid)"
+        return 0
+    fi
+    
+    # Check if service exists
+    if ! kubectl get svc "apollo-router-service" -n "$NAMESPACE" > /dev/null 2>&1; then
+        print_error "Service apollo-router-service not found in namespace $NAMESPACE"
+        return 1
+    fi
+    
+    # Start port forwarding for both ports
+    print_status "Starting port forwarding for apollo-router (GraphQL: $ROUTER_GRAPHQL_PORT, Health: $ROUTER_HEALTH_PORT)..."
+    
+    # Create a temporary log file for debugging
+    local temp_log=$(mktemp)
+    
+    # Forward both ports in a single command
+    kubectl port-forward "svc/apollo-router-service" "$ROUTER_GRAPHQL_PORT:$ROUTER_GRAPHQL_PORT" "$ROUTER_HEALTH_PORT:$ROUTER_HEALTH_PORT" -n "$NAMESPACE" > "$temp_log" 2>&1 &
+    local pid=$!
+    
+    # Save PID
+    echo "$pid" > "$pid_file"
+    
+    # Wait a moment for port forward to establish
+    sleep 3
+    
+    # Verify it's working
+    if kill -0 "$pid" 2>/dev/null; then
+        print_success "Port forwarding for apollo-router started (PID: $pid)"
+        rm -f "$temp_log"
+        
+        # Wait for both ports to be listening
         wait_for_port_forward "apollo-router" "$ROUTER_GRAPHQL_PORT"
+        wait_for_port_forward "apollo-router" "$ROUTER_HEALTH_PORT"
+    else
+        print_error "Failed to start port forwarding for apollo-router"
+        print_error "Process died immediately. Checking logs..."
+        if [ -f "$temp_log" ]; then
+            print_error "Port forwarding logs:"
+            cat "$temp_log" | head -10
+            rm -f "$temp_log"
+        fi
+        rm -f "$pid_file"
+        return 1
     fi
 }
 
@@ -180,10 +234,12 @@ show_port_forward_status() {
     print_status "Port Forwarding Status:"
     echo ""
     
-    # Check router
+    # Check router (both GraphQL and health)
     if is_port_forward_running "apollo-router"; then
         local pid=$(cat $(get_pid_file "apollo-router"))
-        print_success "Router: Running (PID: $pid) - http://localhost:$ROUTER_GRAPHQL_PORT"
+        print_success "Router: Running (PID: $pid)"
+        print_success "  - GraphQL: http://localhost:$ROUTER_GRAPHQL_PORT"
+        print_success "  - Health: http://localhost:$ROUTER_HEALTH_PORT"
     else
         print_error "Router: Not running"
     fi
@@ -203,16 +259,15 @@ show_port_forward_status() {
     echo "  - Status: source scripts/port-forward-utils.sh && show_port_forward_status"
 }
 
-# Cleanup function for script exit
+# Cleanup function for script exit (only when explicitly stopping)
 cleanup_on_exit() {
-    # Only cleanup if this script is being run directly
-    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Only cleanup if this script is being run directly and explicitly stopping
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]] && [[ "$1" == "stop" ]]; then
         stop_all_port_forward
     fi
 }
 
-# Set trap for cleanup
-trap cleanup_on_exit EXIT
+# Note: Removed automatic trap to prevent port forwarding from stopping immediately
 
 # If script is run directly, show status
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

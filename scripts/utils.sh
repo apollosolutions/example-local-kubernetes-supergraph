@@ -4,12 +4,12 @@
 # Apollo Supergraph - Shared Utilities
 # =============================================================================
 #
-# This script contains common utilities used across multiple scripts:
-# - Color definitions for output formatting
-# - Common helper functions
-# - Shared constants and variables
+# This file contains shared utility functions used across the Apollo Supergraph
+# deployment scripts.
 #
 # =============================================================================
+
+
 
 # Colors for output
 RED='\033[0;31m'

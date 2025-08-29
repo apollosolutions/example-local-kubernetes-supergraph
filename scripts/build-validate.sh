@@ -12,8 +12,16 @@
 set -e
 
 # Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/utils.sh"
+if [ -z "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
+else
+    source "$SCRIPT_DIR/scripts/utils.sh"
+fi
 
 show_script_header "Build Validation" "Validating Apollo Supergraph build components"
 

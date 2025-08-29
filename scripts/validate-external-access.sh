@@ -10,9 +10,18 @@
 # =============================================================================
 
 # Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/utils.sh"
-source "$SCRIPT_DIR/config.sh"
+if [ -z "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
+    source "$SCRIPT_DIR/config.sh"
+else
+    source "$SCRIPT_DIR/scripts/utils.sh"
+    source "$SCRIPT_DIR/scripts/config.sh"
+fi
 
 show_script_header "External Access Validation" "Validating external access to subgraphs deployment"
 

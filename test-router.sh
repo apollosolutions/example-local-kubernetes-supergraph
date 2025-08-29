@@ -3,9 +3,20 @@
 set -e
 
 # Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/scripts/utils.sh"
-source "$SCRIPT_DIR/scripts/test-utils.sh"
+if [ -z "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
+    source "$SCRIPT_DIR/test-utils.sh"
+    source "$SCRIPT_DIR/port-forward-utils.sh"
+else
+    source "$SCRIPT_DIR/scripts/utils.sh"
+    source "$SCRIPT_DIR/scripts/test-utils.sh"
+    source "$SCRIPT_DIR/scripts/port-forward-utils.sh"
+fi
 
 # Function to show usage
 show_usage() {
@@ -65,6 +76,21 @@ if ! minikube_is_running; then
 fi
 
 print_success "Minikube is running"
+
+# Check and setup port forwarding if needed
+print_status "Checking port forwarding..."
+if ! is_port_forward_running "apollo-router"; then
+    print_status "Port forwarding not running. Setting up automatically..."
+    if start_router_port_forward; then
+        print_success "Port forwarding setup complete"
+    else
+        print_error "Failed to setup port forwarding. Please run manually:"
+        echo "  source scripts/port-forward-utils.sh && start_router_port_forward"
+        exit 1
+    fi
+else
+    print_success "Port forwarding already running"
+fi
 
 # Run the specified test or all tests
 if [ -n "$TEST_NAME" ]; then

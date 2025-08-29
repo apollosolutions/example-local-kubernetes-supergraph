@@ -16,6 +16,46 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/scripts/utils.sh"
 
+# Help function
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Setup Apollo Studio environment for the Apollo Router.
+
+OPTIONS:
+    -h, --help    Show this help message and exit
+
+EXAMPLES:
+    $0              # Setup environment with default settings
+    $0 --help       # Show this help message
+
+DESCRIPTION:
+    This script sets up the Apollo Studio environment by:
+    - Creating router/.env from router/env.example template
+    - Providing instructions for getting Apollo Studio credentials
+    - Only creates the file if it doesn't already exist
+    
+    After setup, you'll need to add your actual Apollo Studio credentials
+    to the router/.env file.
+
+EOF
+    exit 0
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            ;;
+    esac
+done
+
 ENV_FILE="router/.env"
 TEMPLATE_FILE="router/env.example"
 

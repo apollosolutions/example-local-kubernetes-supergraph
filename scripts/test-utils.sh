@@ -13,8 +13,15 @@
 if [ -z "$SCRIPT_DIR" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
-source "$SCRIPT_DIR/utils.sh"
-source "$SCRIPT_DIR/config.sh"
+
+# If SCRIPT_DIR is the root directory, we need to source from scripts subdirectory
+if [ "$(basename "$SCRIPT_DIR")" = "scripts" ]; then
+    source "$SCRIPT_DIR/utils.sh"
+    source "$SCRIPT_DIR/config.sh"
+else
+    source "$SCRIPT_DIR/scripts/utils.sh"
+    source "$SCRIPT_DIR/scripts/config.sh"
+fi
 
 # Default values (now from config)
 ROUTER_URL=$(get_router_graphql_url | sed 's|/graphql$||')

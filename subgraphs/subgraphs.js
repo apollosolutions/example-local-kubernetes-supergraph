@@ -34,6 +34,10 @@ const getLocalSubgraphConfig = (subgraphName) =>
   LOCAL_SUBGRAPH_CONFIG.find(it => it.name === subgraphName);
 
 export const startSubgraphs = async (httpPort) => {
+  // Log pod ID for Kubernetes identification
+  const podId = process.env.HOSTNAME || 'unknown';
+  console.log(`🚀 [${podId}] Starting subgraphs server...`);
+  
   // Create a monolith express app for all subgraphs
   const app = express();
   const httpServer = http.createServer(app);
@@ -66,6 +70,21 @@ export const startSubgraphs = async (httpPort) => {
         server: httpServer,
         path,
       });
+      
+      // Add WebSocket connection logging
+      wsServer.on('connection', (socket, request) => {
+        console.log(`🔌 [${podId}] WebSocket connection established for [${subgraphConfig.name}] subgraph`);
+        console.log(`🔌 [${podId}] Client IP: ${request.socket.remoteAddress}`);
+        
+        socket.on('close', () => {
+          console.log(`🔌 [${podId}] WebSocket connection closed for [${subgraphConfig.name}] subgraph`);
+        });
+        
+        socket.on('error', (error) => {
+          console.log(`❌ [${podId}] WebSocket error for [${subgraphConfig.name}] subgraph:`, error.message);
+        });
+      });
+      
       const serverCleanup = useServer({ schema }, wsServer);
       wsPlugin = {
         async serverWillStart() {
@@ -76,10 +95,10 @@ export const startSubgraphs = async (httpPort) => {
           };
         },
       };
-      console.log(`Setting up WebSocket server for [${subgraphConfig.name}] subgraph at ws://localhost:${serverPort}/${path}`);
+      console.log(`🚀 [${podId}] Setting up WebSocket server for [${subgraphConfig.name}] subgraph at ws://localhost:${serverPort}${path}`);
     }
 
-    console.log(`Setting up HTTP server for [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`);
+    console.log(`🚀 [${podId}] Setting up HTTP server for [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`);
 
     const server = new ApolloServer({
       schema,
@@ -110,4 +129,5 @@ export const startSubgraphs = async (httpPort) => {
 
   // Start entire monolith at given port
   await new Promise((resolve) => httpServer.listen({ port: serverPort }, resolve));
+  console.log(`🚀 [${podId}] All subgraphs started and listening on port ${serverPort}`);
 };

@@ -25,10 +25,6 @@ subscription:
         reviews:
           protocol: graphql_ws
 
-telemetry:
-  instrumentation:
-    spans:
-      mode: spec_compliant
 
 # Enable health check endpoint on all interfaces
 health_check:

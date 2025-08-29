@@ -10,9 +10,11 @@
 # =============================================================================
 
 # Source shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/utils.sh"
-source "$SCRIPT_DIR/config.sh"
+if [ -z "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+source "$SCRIPT_DIR/scripts/utils.sh"
+source "$SCRIPT_DIR/scripts/config.sh"
 
 # Default values (now from config)
 ROUTER_URL=$(get_router_graphql_url | sed 's|/graphql$||')

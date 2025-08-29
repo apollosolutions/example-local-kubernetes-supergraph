@@ -36,6 +36,9 @@ done
 
 show_script_header "Apollo Supergraph Kubernetes Testing" "Testing Apollo Supergraph deployment in minikube"
 
+# Get namespace
+NAMESPACE=$(get_k8s_namespace)
+
 # Check if namespace exists
 if ! namespace_exists "$NAMESPACE"; then
     print_error "Namespace $NAMESPACE does not exist. Please deploy first:"
